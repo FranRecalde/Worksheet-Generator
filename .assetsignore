@@ -1,0 +1,9 @@
+.git
+.gitignore
+README.md
+package.json
+metadata.json
+vite.config.ts
+wrangler.jsonc
+node_modules
+.wrangler

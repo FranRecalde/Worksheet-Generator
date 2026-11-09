@@ -1,0 +1,8 @@
+{
+  "name": "Pictorio",
+  "description": "Visual vocabulary generator and flashcard maker creating multi-source image grids with PPTX slide export, classroom worksheets, and quiz modes.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

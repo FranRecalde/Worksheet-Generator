@@ -1,0 +1,10 @@
+{
+  // Pictorio on Cloudflare Workers (static files, no build step).
+  "name": "pictorio",
+  "compatibility_date": "2026-10-01",
+  // Needed for branch preview builds (npx wrangler preview). Can stay empty.
+  "previews": {},
+  "assets": {
+    "directory": "."
+  }
+}

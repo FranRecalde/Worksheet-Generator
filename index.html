@@ -1,0 +1,2856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pictorio - Visual Vocabulary &amp; Worksheet Generator</title>
+    <meta name="description" content="Visual vocabulary generator and flashcard maker creating multi-source image grids with PPTX slide export, classroom worksheets, and quiz modes." />
+    <meta property="og:title" content="Pictorio" />
+    <meta property="og:description" content="Visual vocabulary generator and flashcard maker creating multi-source image grids with PPTX slide export, classroom worksheets, and quiz modes." />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: League Spartan (800, 900) and DM Sans (400, 500, 700) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=League+Spartan:wght@800;900&display=swap" rel="stylesheet">
+
+    <!-- React & ReactDOM 18 UMD -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel Standalone -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- PptxGenJS -->
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    <!-- Pictorio deck engine: deterministic page layouts shared by live preview, print, and PowerPoint export -->
+    <script src="deck.js"></script>
+
+    <style>
+        :root {
+            --cream: #F6E8CE;   /* page background */
+            --navy: #0C1029;    /* all text, borders, shadows */
+            --orange: #E94C2D;  /* main action buttons, accents */
+            --mustard: #F2B33D; /* selected states, stickers */
+            --teal: #2A7F7A;    /* success messages, focus rings */
+            --paper: #FFFBF3;   /* card and panel surfaces */
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--cream);
+            color: var(--navy);
+            margin: 0;
+            padding: 0;
+        }
+
+        h1, h2, h3, .font-heading {
+            font-family: 'League Spartan', sans-serif;
+            font-weight: 800;
+        }
+
+        .heading-1 {
+            font-family: 'League Spartan', sans-serif;
+            font-size: 48px;
+            line-height: 52px;
+            font-weight: 900;
+        }
+        @media (max-width: 599px) {
+            .heading-1 {
+                font-size: 36px;
+                line-height: 40px;
+            }
+        }
+
+        .heading-2 {
+            font-family: 'League Spartan', sans-serif;
+            font-size: 28px;
+            line-height: 34px;
+            font-weight: 800;
+        }
+
+        .heading-3 {
+            font-family: 'League Spartan', sans-serif;
+            font-size: 20px;
+            line-height: 26px;
+            font-weight: 800;
+        }
+
+        .overline-text {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            line-height: 16px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .app-container {
+            max-width: 1360px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        @media (min-width: 600px) {
+            .app-container {
+                padding-left: 24px;
+                padding-right: 24px;
+            }
+        }
+        @media (min-width: 960px) {
+            .app-container {
+                padding-left: 32px;
+                padding-right: 32px;
+            }
+        }
+
+        /* Panels and Cards: Paper background, 2.5px solid navy border, 12px radius, 6px 6px 0 navy shadow */
+        .kind-panel {
+            background-color: var(--paper);
+            border: 2.5px solid var(--navy);
+            border-radius: 12px;
+            box-shadow: 6px 6px 0 var(--navy);
+        }
+
+        .kind-card {
+            background-color: var(--paper);
+            border: 2.5px solid var(--navy);
+            border-radius: 12px;
+            box-shadow: 6px 6px 0 var(--navy);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            will-change: transform;
+        }
+
+        .kind-card:hover {
+            transform: rotate(0deg) translate(-2px, -2px) !important;
+            box-shadow: 8px 8px 0 var(--navy);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .kind-card {
+                transform: none !important;
+                transition: none !important;
+            }
+            .kind-card:hover {
+                transform: none !important;
+                box-shadow: 6px 6px 0 var(--navy) !important;
+            }
+            .btn-chunky:active {
+                transform: none !important;
+            }
+            .grid-pill:active {
+                transform: none !important;
+            }
+        }
+
+        /* Chunky Buttons: 2.5px navy border, 10px radius, 4px 4px 0 navy shadow, DM Sans 700 */
+        .btn-chunky {
+            white-space: nowrap;
+            border: 2.5px solid var(--navy);
+            border-radius: 10px;
+            box-shadow: 4px 4px 0 var(--navy);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            height: 44px;
+            transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding-left: 16px;
+            padding-right: 16px;
+            text-decoration: none;
+            user-select: none;
+        }
+        .btn-chunky:active:not(:disabled) {
+            transform: translate(3px, 3px);
+            box-shadow: 1px 1px 0 var(--navy);
+        }
+        .btn-chunky:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: 2px 2px 0 var(--navy);
+        }
+
+        .btn-primary-chunky {
+            background-color: var(--orange);
+            color: var(--cream);
+        }
+        .btn-primary-chunky:hover:not(:disabled) {
+            background-color: #D83C1F;
+        }
+
+        .btn-secondary-chunky {
+            background-color: var(--paper);
+            color: var(--navy);
+        }
+        .btn-secondary-chunky:hover:not(:disabled) {
+            background-color: var(--cream);
+        }
+
+        .btn-mustard-chunky {
+            background-color: var(--mustard);
+            color: var(--navy);
+        }
+        .btn-mustard-chunky:hover:not(:disabled) {
+            background-color: #E5A429;
+        }
+
+        /* Grid Size Pills: Chunky style with 2.5px border, selected pill mustard */
+        .grid-pill {
+            border: 2.5px solid var(--navy);
+            border-radius: 999px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 14px;
+            box-shadow: 3px 3px 0 var(--navy);
+            cursor: pointer;
+            transition: all 0.08s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .grid-pill:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0 var(--navy);
+        }
+        .grid-pill-unselected {
+            background-color: var(--paper);
+            color: var(--navy);
+        }
+        .grid-pill-unselected:hover {
+            background-color: var(--cream);
+        }
+        .grid-pill-selected {
+            background-color: var(--mustard);
+            color: var(--navy);
+        }
+
+        /* Mode Dropdown: match button border and shadow style */
+        .select-chunky {
+            height: 42px;
+            background-color: var(--paper);
+            border: 2.5px solid var(--navy);
+            border-radius: 10px;
+            box-shadow: 3px 3px 0 var(--navy);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            color: var(--navy);
+            padding: 0 12px;
+            outline: none;
+            cursor: pointer;
+        }
+        .select-chunky:focus {
+            outline: 3px solid var(--teal);
+            outline-offset: 1px;
+        }
+
+        /* Text Area & Inputs: Paper background, 2.5px navy border, radius 10px, 3px teal outline on focus */
+        .textarea-chunky {
+            background-color: var(--paper);
+            border: 2.5px solid var(--navy);
+            border-radius: 10px;
+            color: var(--navy);
+            outline: none;
+            transition: outline 0.15s ease;
+        }
+        .textarea-chunky:focus {
+            outline: 3px solid var(--teal);
+            outline-offset: 1px;
+        }
+
+        /* Message Banners: 2.5px navy border, offset shadow */
+        .msg-box {
+            border: 2.5px solid var(--navy);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            line-height: 19px;
+            box-shadow: 4px 4px 0 var(--navy);
+        }
+        .msg-success {
+            background-color: var(--teal);
+            color: var(--cream);
+        }
+        .msg-warning {
+            background-color: var(--mustard);
+            color: var(--navy);
+        }
+        .msg-error {
+            background-color: var(--orange);
+            color: var(--cream);
+        }
+        .msg-info {
+            background-color: var(--paper);
+            color: var(--navy);
+        }
+
+        /* Icon Buttons on Cards: Touch target >= 44x44px with chunky styling */
+        .icon-btn-chunky {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--navy);
+            border-radius: 8px;
+            box-shadow: 2px 2px 0 var(--navy);
+            background-color: var(--paper);
+            color: var(--navy);
+            transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease;
+            cursor: pointer;
+        }
+        .icon-btn-chunky:hover {
+            background-color: var(--cream);
+        }
+        .icon-btn-chunky:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0 0 0 var(--navy);
+        }
+
+        /* Print CSS: Student pages then Answer Key pages in exact A4 portrait */
+        .print-only-root {
+            display: none;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; margin: 0 !important; padding: 0 !important; }
+            .print-only-root {
+                display: block !important;
+                width: 100% !important;
+            }
+            .a4-print-page {
+                width: 210mm !important;
+                height: 297mm !important;
+                page-break-after: always;
+                break-after: page;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            .a4-print-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+            .a4-print-page > div {
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // ==========================================
+        // 1. CONFIGURATION & API KEYS
+        // ==========================================
+        const CONFIG = {
+            PIXABAY_KEY: '35727559-0e840d0e0fcf00ac6876a7099',
+        };
+
+        // ==========================================
+        // 2. LOCALSTORAGE CACHE & SAVED STATE SYSTEM
+        // ==========================================
+        const CACHE_PREFIX = 'vibeword:v3:';
+        const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+        const WORKSHEET_STORAGE_KEY = 'pictorio:worksheets:state:v1';
+
+        const clearVibewordCache = () => {
+            try {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && (k.startsWith('vibeword:v1:') || k.startsWith('vibeword:v2:') || k.startsWith('vibeword:v3:'))) {
+                        keysToRemove.push(k);
+                    }
+                }
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
+        };
+
+        const getCachedResult = (providerKey, sourceFilter, term, page) => {
+            try {
+                const normalizedTerm = (term || '').trim().toLowerCase();
+                const key = `${CACHE_PREFIX}${providerKey}:${sourceFilter}:${normalizedTerm}:${page}`;
+                const raw = localStorage.getItem(key);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || !parsed.cachedAt) return null;
+                if (Date.now() - parsed.cachedAt > CACHE_TTL_MS) {
+                    try { localStorage.removeItem(key); } catch (e) {}
+                    return null;
+                }
+                return { ...parsed, fromCache: true };
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const setCachedResult = (providerKey, sourceFilter, term, page, result) => {
+            if (!result || !result.url) return;
+            const normalizedTerm = (term || '').trim().toLowerCase();
+            const key = `${CACHE_PREFIX}${providerKey}:${sourceFilter}:${normalizedTerm}:${page}`;
+            const payload = JSON.stringify({ ...result, cachedAt: Date.now() });
+            try {
+                localStorage.setItem(key, payload);
+            } catch (err) {
+                try {
+                    clearVibewordCache();
+                    localStorage.setItem(key, payload);
+                } catch (retryErr) {}
+            }
+        };
+
+        // ==========================================
+        // 3. RATE LIMITERS & CONCURRENCY CONTROLLERS
+        // ==========================================
+        class Semaphore {
+            constructor(max) {
+                this.max = max;
+                this.current = 0;
+                this.queue = [];
+            }
+            async acquire() {
+                if (this.current < this.max) {
+                    this.current++;
+                    return;
+                }
+                await new Promise(resolve => this.queue.push(resolve));
+                this.current++;
+            }
+            release() {
+                this.current--;
+                if (this.queue.length > 0) {
+                    const next = this.queue.shift();
+                    next();
+                }
+            }
+            async run(fn) {
+                await this.acquire();
+                try {
+                    return await fn();
+                } finally {
+                    this.release();
+                }
+            }
+        }
+
+        const cardConcurrency = new Semaphore(3);
+
+        class RateLimiter {
+            constructor(minIntervalMs) {
+                this.minIntervalMs = minIntervalMs;
+                this.lastCallTime = 0;
+                this.queue = [];
+                this.processing = false;
+            }
+            async schedule(fn) {
+                return new Promise((resolve, reject) => {
+                    this.queue.push({ fn, resolve, reject });
+                    this.processNext();
+                });
+            }
+            async processNext() {
+                if (this.processing || this.queue.length === 0) return;
+                this.processing = true;
+
+                const { fn, resolve, reject } = this.queue.shift();
+                const now = Date.now();
+                const elapsed = now - this.lastCallTime;
+                const wait = Math.max(0, this.minIntervalMs - elapsed);
+
+                if (wait > 0) {
+                    await new Promise(r => setTimeout(r, wait));
+                }
+
+                this.lastCallTime = Date.now();
+                try {
+                    const res = await fn();
+                    resolve(res);
+                } catch (err) {
+                    reject(err);
+                } finally {
+                    this.processing = false;
+                    if (this.queue.length > 0) {
+                        this.processNext();
+                    }
+                }
+            }
+        }
+
+        const openverseLimiter = new RateLimiter(1150);
+        const wikimediaLimiter = new RateLimiter(250);
+        const pixabayLimiter = new RateLimiter(100);
+        const arasaacLimiter = new RateLimiter(200);
+
+        const fetchWithTimeout = async (url, options = {}, timeoutMs = 8000) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (err) {
+                clearTimeout(id);
+                throw err;
+            }
+        };
+
+        const reducePhrase = (rawTerm) => {
+            if (!rawTerm) return '';
+            let text = rawTerm.toLowerCase().trim();
+            if (text.startsWith('to ')) {
+                text = text.slice(3).trim();
+            }
+            const initialWords = text.split(/\s+/).filter(Boolean);
+            if (initialWords.length >= 3) {
+                if (text.startsWith('ir a la ')) text = text.slice(8).trim();
+                else if (text.startsWith('ir al ')) text = text.slice(6).trim();
+                else if (text.startsWith('ir a ')) text = text.slice(5).trim();
+            }
+            const stopwords = new Set([
+                'the', 'a', 'an', 'my', 'your', 'his', 'her', 'our', 'their', 'some', 'any',
+                'i', 'it', 'its', 'you', 'he', 'she', 'we', 'they', 'him', 'them', 'us',
+                'of', 'in', 'on', 'at', 'to', 'for', 'with', 'and', 'or',
+                'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas',
+                'le', 'les', 'une', 'der', 'die', 'das', 'ein', 'eine', 'il', 'lo', 'gli',
+                'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'de', 'del', 'en', 'con', 'y', 'o', 'al'
+            ]);
+            const words = text.split(/\s+/).filter(Boolean);
+            const filtered = words.filter(w => !stopwords.has(w));
+            if (filtered.length > 0) return filtered.join(' ');
+            return rawTerm.trim();
+        };
+
+        const NEGATION = /(^|[\s'’])(no|not|never|nunca|jamás|ne|n|pas|jamais|nicht|kein\w*|nie|niemals)(?=$|[\s'’])|n['’]t\b/i;
+        const negativeForms = (text, lang) => {
+            const t = (text || '').toLowerCase();
+            const out = [];
+            if (/\b(don['’]?t|do not|doesn['’]?t|does not|didn['’]?t|did not|not)\s+like\b/.test(t)) out.push({ lang: 'en', word: 'dislike' });
+            const verb = t.match(/\b(?:don['’]?t|do not|doesn['’]?t|does not|didn['’]?t|did not|never|not)\s+([a-z]+)/);
+            if (verb) out.push({ lang: 'en', word: `not ${verb[1]}` });
+            if (lang === 'es' && /\bno\s+(me|te|le|nos|os|les)?\s*gustan?\b/.test(t)) out.push({ lang: 'es', word: 'no gustar' });
+            if (lang === 'fr' && /n['’]?\s*aim\w*\s+pas|ne\s+pas\s+aimer/.test(t)) out.push({ lang: 'fr', word: 'ne pas aimer' });
+            if (lang === 'de' && (/\b(mag|magst|mögen|mögt)\b.*\bnicht\b/.test(t) || /\bnicht\s+mögen\b/.test(t))) out.push({ lang: 'de', word: 'nicht mögen' });
+            return out;
+        };
+
+        const arasaacCandidates = (term, label, lang) => {
+            const L = ['es', 'fr', 'de', 'it'].includes(lang) ? lang : 'es';
+            const enNeg = NEGATION.test(term || '');
+            const lblNeg = NEGATION.test(label || '');
+            const first = [], last = [], extra = [];
+            if (label) {
+                if (lblNeg) {
+                    first.push({ lang: L, word: label.toLowerCase().trim() });
+                    extra.push(...negativeForms(label, L));
+                } else {
+                    const r = reducePhrase(label);
+                    if (r) first.push({ lang: L, word: r });
+                    const lw = r.split(/\s+/).filter(Boolean).pop();
+                    if (lw) last.push({ lang: L, word: lw });
+                }
+            }
+            if (term) {
+                if (enNeg) {
+                    first.push({ lang: 'en', word: term.toLowerCase().trim().replace(/^to\s+/, '') });
+                    extra.push(...negativeForms(term, L));
+                } else {
+                    const r = reducePhrase(term);
+                    if (r) first.push({ lang: 'en', word: r });
+                    const lw = r.split(/\s+/).filter(Boolean).pop();
+                    if (lw) last.push({ lang: 'en', word: lw });
+                }
+            }
+            const list = [...first, ...extra, ...last];
+            if (enNeg || lblNeg) list.push({ lang: 'en', word: 'no' });
+            const seen = new Set();
+            return list.filter(c => {
+                const k = `${c.lang}:${c.word}`;
+                if (seen.has(k) || !c.word) return false;
+                seen.add(k);
+                return true;
+            });
+        };
+
+        // ==========================================
+        // 4. IMAGE PROVIDERS IMPLEMENTATION
+        // ==========================================
+        const arasaacObj = (id) => ({
+            url: `https://api.arasaac.org/api/pictograms/${id}`,
+            image: `https://api.arasaac.org/api/pictograms/${id}`,
+            provider: 'ARASAAC',
+            providerKey: 'arasaac',
+            license: 'CC BY-NC-SA',
+            author: 'Sergio Palao',
+            attribution: 'Pictograms: Sergio Palao. Origin: ARASAAC (https://arasaac.org). Licence: CC BY-NC-SA. Owner: Government of Aragón.',
+            sourceUrl: `https://arasaac.org/pictograms/en/${id}`,
+            fromCache: true,
+        });
+
+        const fetchArasaac = async (term, page, logError, displayLabel, lang = 'es') => {
+            const cacheKey = `${term}|${displayLabel || ''}`;
+            const cached = getCachedResult('arasaac', 'v3', cacheKey, page);
+            if (cached) return cached;
+
+            const candidates = arasaacCandidates(term, displayLabel, lang);
+            return arasaacLimiter.schedule(async () => {
+                const triedQueries = new Set();
+                for (const cand of candidates) {
+                    const queryKey = `${cand.lang}:${cand.word.trim().toLowerCase()}`;
+                    if (triedQueries.has(queryKey)) continue;
+                    triedQueries.add(queryKey);
+                    try {
+                        const url = `https://api.arasaac.org/api/pictograms/${cand.lang}/bestsearch/${encodeURIComponent(cand.word)}`;
+                        const res = await fetchWithTimeout(url);
+                        if (!res.ok) continue;
+                        const data = await res.json();
+                        if (Array.isArray(data) && data.length > 0) {
+                            const itemIndex = Math.max(0, page - 1);
+                            if (itemIndex >= data.length) continue;
+                            const item = data[itemIndex];
+                            if (item && item._id) {
+                                const result = {
+                                    url: `https://api.arasaac.org/api/pictograms/${item._id}`,
+                                    provider: 'ARASAAC',
+                                    providerKey: 'arasaac',
+                                    license: 'CC BY-NC-SA',
+                                    author: 'Sergio Palao',
+                                    attribution: 'Pictograms: Sergio Palao. Origin: ARASAAC (https://arasaac.org). Licence: CC BY-NC-SA. Owner: Government of Aragón.',
+                                    sourceUrl: `https://arasaac.org/pictograms/en/${item._id}`,
+                                    fromCache: false
+                                };
+                                logError(`ARASAAC hit for "${displayLabel || term}" with ${cand.lang} query: "${cand.word}"`, "info", "ARASAAC", term);
+                                setCachedResult('arasaac', 'v3', cacheKey, page, result);
+                                return result;
+                            }
+                        }
+                    } catch (err) {
+                        logError(`ARASAAC fetch error for "${cand.word}": ${err.message}`, "error", "ARASAAC", term);
+                    }
+                }
+                return null;
+            });
+        };
+
+        const fetchPixabayVector = async (term, page, logError) => {
+            if (!term) return null;
+            const cached = getCachedResult('pixabay_vector', 'any', term, page);
+            if (cached) return cached;
+            if (!CONFIG.PIXABAY_KEY || CONFIG.PIXABAY_KEY.trim() === '') return null;
+
+            return pixabayLimiter.schedule(async () => {
+                try {
+                    const url = `https://pixabay.com/api/?key=${encodeURIComponent(CONFIG.PIXABAY_KEY)}&q=${encodeURIComponent(term)}&image_type=vector&per_page=5&page=${page}`;
+                    const res = await fetchWithTimeout(url);
+                    if (!res.ok) return null;
+                    const data = await res.json();
+                    if (data.hits && data.hits.length > 0) {
+                        const hit = data.hits[0];
+                        const result = {
+                            url: hit.webformatURL || hit.largeImageURL,
+                            provider: 'Pixabay Vector',
+                            providerKey: 'pixabay_vector',
+                            license: 'Pixabay Licence',
+                            author: hit.user || 'Pixabay Creator',
+                            attribution: `${hit.user || 'Pixabay Creator'} on Pixabay (Pixabay Licence)`,
+                            sourceUrl: hit.pageURL || 'https://pixabay.com',
+                            fromCache: false
+                        };
+                        setCachedResult('pixabay_vector', 'any', term, page, result);
+                        return result;
+                    }
+                } catch (err) {
+                    logError(`Pixabay Vector fetch error: ${err.message}`, "error", "Pixabay Vector", term);
+                }
+                return null;
+            });
+        };
+
+        const WIKI_REJECT_EXTENSIONS = /\.(tif|tiff|pdf|djvu|ogv|webm|gif|xcf|stl)($|\?)/i;
+        const WIKI_BANNED_TITLE_PHRASES = [
+            "coat of arms", "flag of", "chart", "graph", "diagram", "signature", "stamp",
+            "logo of", "our world in data", "statistics", "data", "trend", "percent",
+            "population", "election", "temperature", "anomaly", "syntax", "x-bar"
+        ];
+        const UNSAFE_TITLE = /hate[\s_-]*(group|symbol|crime)|nazi|swastika|ku[\s_-]*klux|\bkkk\b|white[\s_-]*power|fascis|isis\b|terroris|neo-?nazi|supremac|anti-?sharp|american front/i;
+        const YEARISH = /\b(1[6-9]\d\d|20\d\d)\b/;
+        const unsuitableTitle = (title, term) => {
+            const t = (title || '').toLowerCase().replace(/_/g, ' ');
+            const q = (term || '').toLowerCase();
+            if (UNSAFE_TITLE.test(t)) return true;
+            if (YEARISH.test(t) && !YEARISH.test(q)) return true;
+            if (/\bmaps?\b/.test(t) && !/\bmaps?\b/.test(q)) return true;
+            return WIKI_BANNED_TITLE_PHRASES.some(phrase => t.includes(phrase.replace(/_/g, ' ')) && !q.includes(phrase.trim()));
+        };
+
+        const wikimediaQuery = async (searchQuery, offset, term) => {
+            const cleanText = (str) => str ? str.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').trim() : '';
+            const lowerTerm = (term || '').toLowerCase();
+            const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=10&gsroffset=${offset}&gsrsearch=${encodeURIComponent(searchQuery)}&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=500`;
+            const res = await fetchWithTimeout(url);
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (!data.query || !data.query.pages) return [];
+            const out = [];
+            for (const p of Object.values(data.query.pages)) {
+                if (!p.imageinfo || p.imageinfo.length === 0) continue;
+                const info = p.imageinfo[0];
+                const meta = info.extmetadata || {};
+                const thumb = info.thumburl || info.url;
+                if (!thumb) continue;
+                if (WIKI_REJECT_EXTENSIONS.test(p.title) || WIKI_REJECT_EXTENSIONS.test(thumb) || (info.url && WIKI_REJECT_EXTENSIONS.test(info.url))) continue;
+                const creditLower = cleanText(meta.Artist?.value || meta.Credit?.value).toLowerCase();
+                if (unsuitableTitle(p.title, lowerTerm) || creditLower.includes('our world in data')) continue;
+                const license = cleanText(meta.LicenseShortName?.value || meta.UsageTerms?.value) || 'CC / Public Domain';
+                const author = cleanText(meta.Artist?.value || meta.Credit?.value) || 'Wikimedia Contributor';
+                const title = p.title.replace(/^File:/i, '').replace(/\.[^/.]+$/, '');
+                out.push({
+                    rawTitle: p.title,
+                    result: {
+                        url: thumb, provider: 'Wikimedia Commons', providerKey: 'wikimedia_commons', license, author,
+                        attribution: `"${title}" by ${author} via Wikimedia Commons (${license})`,
+                        sourceUrl: info.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title)}`,
+                        fromCache: false
+                    }
+                });
+            }
+            return out;
+        };
+
+        const fetchWikimediaCommons = async (term, page, sourceFilter, logError) => {
+            if (!term) return null;
+            const cached = getCachedResult('wikimedia_commons', sourceFilter, term, page);
+            if (cached) return cached;
+
+            const reducedPhrase = reducePhrase(term);
+            const reducedWords = reducedPhrase.split(/\s+/).filter(Boolean);
+            const lastWord = reducedWords.length > 0 ? reducedWords[reducedWords.length - 1] : reducedPhrase;
+
+            const ladder = [
+                `filetype:svg "${term}"`,
+                `filetype:svg ${reducedPhrase}`,
+                `filetype:svg ${lastWord} icon`,
+                `filetype:drawing ${reducedPhrase}`,
+                `${reducedPhrase} clipart`
+            ];
+
+            return wikimediaLimiter.schedule(async () => {
+                const tryQuery = async (searchQuery) => {
+                    const acceptableResults = await wikimediaQuery(searchQuery, (page - 1) * 10, term);
+                    if (!acceptableResults || acceptableResults.length === 0) return null;
+                    const preferred = acceptableResults.find(item => {
+                        const t = item.rawTitle.toLowerCase();
+                        return reducedWords.some(w => t.includes(w));
+                    });
+                    return preferred ? preferred.result : acceptableResults[0].result;
+                };
+
+                try {
+                    const triedQueries = new Set();
+                    for (const query of ladder) {
+                        if (triedQueries.has(query)) continue;
+                        triedQueries.add(query);
+                        const hit = await tryQuery(query);
+                        if (hit) {
+                            logError(`Wikimedia Commons hit for "${term}"`, "info", "Wikimedia Commons", term);
+                            setCachedResult('wikimedia_commons', sourceFilter, term, page, hit);
+                            return hit;
+                        }
+                    }
+                } catch (err) {
+                    logError(`Wikimedia Commons error: ${err.message}`, "error", "Wikimedia Commons", term);
+                }
+                return null;
+            });
+        };
+
+        const fetchOpenverse = async (term, page, sourceFilter, logError) => {
+            if (!term) return null;
+            const cached = getCachedResult('openverse', sourceFilter, term, page);
+            if (cached) return cached;
+
+            return openverseLimiter.schedule(async () => {
+                try {
+                    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(term)}&page_size=20&page=${page}&extension=svg`;
+                    const res = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) return null;
+                    const data = await res.json();
+                    const usable = (data.results || []).filter(r => !unsuitableTitle(r.title || r.url, term));
+                    if (usable.length > 0) {
+                        const item = usable[0];
+                        const license = (item.license || 'CC').toUpperCase() + (item.license_version ? ` ${item.license_version}` : '');
+                        const author = item.creator || 'Openverse Contributor';
+                        const title = item.title || term;
+                        const attribution = item.attribution || `"${title}" by ${author} (${license}) via Openverse`;
+                        const imageUrl = item.url || item.thumbnail;
+                        const result = {
+                            url: imageUrl,
+                            provider: 'Openverse',
+                            providerKey: 'openverse',
+                            license,
+                            author,
+                            attribution,
+                            sourceUrl: item.foreign_landing_url || item.url,
+                            fromCache: false
+                        };
+                        setCachedResult('openverse', sourceFilter, term, page, result);
+                        return result;
+                    }
+                } catch (err) {
+                    logError(`Openverse fetch error: ${err.message}`, "error", "Openverse", term);
+                }
+                return null;
+            });
+        };
+
+        const fetchPixabayIllustration = async (term, page, logError) => {
+            if (!term) return null;
+            const cached = getCachedResult('pixabay_illustration', 'any', term, page);
+            if (cached) return cached;
+            if (!CONFIG.PIXABAY_KEY || CONFIG.PIXABAY_KEY.trim() === '') return null;
+
+            return pixabayLimiter.schedule(async () => {
+                try {
+                    const url = `https://pixabay.com/api/?key=${encodeURIComponent(CONFIG.PIXABAY_KEY)}&q=${encodeURIComponent(term)}&image_type=illustration&per_page=5&page=${page}`;
+                    const res = await fetchWithTimeout(url);
+                    if (!res.ok) return null;
+                    const data = await res.json();
+                    if (data.hits && data.hits.length > 0) {
+                        const hit = data.hits[0];
+                        const result = {
+                            url: hit.webformatURL || hit.largeImageURL,
+                            provider: 'Pixabay (Illustration)',
+                            providerKey: 'pixabay_illustration',
+                            license: 'Pixabay Licence',
+                            author: hit.user || 'Pixabay Creator',
+                            attribution: `${hit.user || 'Pixabay Creator'} on Pixabay (Pixabay Licence)`,
+                            sourceUrl: hit.pageURL || 'https://pixabay.com',
+                            fromCache: false
+                        };
+                        setCachedResult('pixabay_illustration', 'any', term, page, result);
+                        return result;
+                    }
+                } catch (err) {}
+                return null;
+            });
+        };
+
+        // Picture Picker multi-provider search lists
+        const listArasaac = async (query, lang) => {
+            const L = ['es', 'fr', 'de', 'it'].includes(lang) ? lang : 'es';
+            const cands = arasaacCandidates(query, '', L);
+            const typed = query.toLowerCase().trim();
+            cands.splice(1, 0, { lang: L, word: typed });
+            const ids = [];
+            for (const c of cands.slice(0, 6)) {
+                if (ids.length >= 12) break;
+                for (const mode of ['bestsearch', 'search']) {
+                    try {
+                        const res = await arasaacLimiter.schedule(() => fetchWithTimeout(`https://api.arasaac.org/api/pictograms/${c.lang}/${mode}/${encodeURIComponent(c.word)}`));
+                        if (!res.ok) continue;
+                        const data = await res.json();
+                        if (Array.isArray(data)) data.slice(0, 8).forEach(item => { if (item && item._id && !ids.includes(item._id)) ids.push(item._id); });
+                    } catch (e) {}
+                    if (ids.length >= 12) break;
+                }
+            }
+            return ids.slice(0, 12).map(arasaacObj);
+        };
+
+        const listPixabay = async (query, type) => {
+            if (!CONFIG.PIXABAY_KEY || CONFIG.PIXABAY_KEY.trim() === '') return [];
+            try {
+                const res = await pixabayLimiter.schedule(() => fetchWithTimeout(`https://pixabay.com/api/?key=${encodeURIComponent(CONFIG.PIXABAY_KEY)}&q=${encodeURIComponent(reducePhrase(query) || query)}&image_type=${type}&per_page=8`));
+                if (!res.ok) return [];
+                const data = await res.json();
+                return (data.hits || []).map(hit => ({
+                    url: hit.webformatURL || hit.largeImageURL,
+                    provider: type === 'vector' ? 'Pixabay Vector' : 'Pixabay (Illustration)',
+                    providerKey: type === 'vector' ? 'pixabay_vector' : 'pixabay_illustration',
+                    license: 'Pixabay Licence', author: hit.user || 'Pixabay Creator',
+                    attribution: `${hit.user || 'Pixabay Creator'} on Pixabay (Pixabay Licence)`,
+                    sourceUrl: hit.pageURL || 'https://pixabay.com', fromCache: false
+                }));
+            } catch (e) { return []; }
+        };
+
+        const listWikimedia = async (query) => {
+            const reduced = reducePhrase(query) || query;
+            const out = [];
+            for (const q of [`filetype:svg ${reduced}`, `filetype:drawing ${reduced}`]) {
+                try {
+                    const found = await wikimediaLimiter.schedule(() => wikimediaQuery(q, 0, query));
+                    found.forEach(f => { if (!out.some(o => o.url === f.result.url)) out.push(f.result); });
+                } catch (e) {}
+                if (out.length >= 8) break;
+            }
+            return out.slice(0, 8);
+        };
+
+        const listOpenverse = async (query) => {
+            try {
+                const res = await openverseLimiter.schedule(() => fetchWithTimeout(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(reducePhrase(query) || query)}&page_size=8&extension=svg`, { headers: { 'Accept': 'application/json' } }));
+                if (!res.ok) return [];
+                const data = await res.json();
+                return (data.results || []).filter(item => !unsuitableTitle(item.title || item.url, query)).map(item => {
+                    const license = (item.license || 'CC').toUpperCase() + (item.license_version ? ` ${item.license_version}` : '');
+                    const author = item.creator || 'Openverse Contributor';
+                    return {
+                        url: item.url || item.thumbnail, provider: 'Openverse', providerKey: 'openverse', license, author,
+                        attribution: item.attribution || `"${item.title || query}" by ${author} (${license}) via Openverse`,
+                        sourceUrl: item.foreign_landing_url || item.url, fromCache: false
+                    };
+                });
+            } catch (e) { return []; }
+        };
+
+        const resolveImageFallback = async (term, page = 1, logError, displayLabel = '', lang = 'es') => {
+            const searchQ = (term || displayLabel || '').trim();
+            const providersToTry = [
+                () => fetchArasaac(term, page, logError, displayLabel, lang),
+                () => fetchPixabayVector(searchQ, page, logError),
+                () => fetchWikimediaCommons(searchQ, page, 'clipart', logError),
+                () => fetchOpenverse(searchQ, page, 'clipart', logError),
+                () => fetchPixabayIllustration(searchQ, page, logError),
+            ];
+            for (const tryProvider of providersToTry) {
+                const result = await tryProvider();
+                if (result && result.url) return result;
+            }
+            logError(`No image found from active providers for "${displayLabel || term}".`, "warning", "Fallback Chain", displayLabel || term);
+            return null;
+        };
+
+        const getMaskedLabel = (text, mode) => {
+            if (!text) return "";
+            if (mode === 'blank') return "________________";
+            if (mode === 'scaffold') {
+                return text.split(' ').map(word => {
+                    if (word.length <= 1) return word;
+                    return word.charAt(0) + '*'.repeat(word.length - 1);
+                }).join(' ');
+            }
+            return text;
+        };
+
+        const fetchImageAsBase64 = async (url) => {
+            if (!url) return null;
+            if (url.startsWith('data:')) return url;
+            try {
+                const response = await fetch(url, { mode: 'cors' });
+                if (!response.ok) return null;
+                const blob = await response.blob();
+                return await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = () => resolve(null);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (err) {
+                return null;
+            }
+        };
+
+        // ==========================================
+        // 5. PRELOADED DETERMINISTIC EXAMPLES & PICTURES
+        // ==========================================
+        const EXAMPLES = {
+            es: {
+                title: 'Los animales y las mascotas',
+                vocab: [
+                    'el perro = the dog',
+                    'el gato = the cat',
+                    'el caballo = the horse',
+                    'el pájaro = the bird',
+                    'el conejo = the rabbit',
+                    'el pez = the fish',
+                    'la tortuga = the turtle',
+                    'la vaca = the cow'
+                ].join('\n'),
+                sentences: [
+                    'Mi hermano tiene un [perro] muy simpático. = My brother has a very friendly dog.',
+                    'El *gato* duerme en el sofá. = The cat sleeps on the sofa.',
+                    'En la granja vemos un [caballo] blanco. = On the farm we see a white horse.',
+                    'El *pájaro* canta por la mañana. = The bird sings in the morning.',
+                    'Mi hermana quiere un [conejo] pequeño. = My sister wants a small rabbit.',
+                    'El *pez* nada rápido en el agua. = The fish swims fast in the water.'
+                ].join('\n')
+            },
+            fr: {
+                title: 'Les animaux familiers',
+                vocab: [
+                    'le chien = the dog',
+                    'le chat = the cat',
+                    'le cheval = the horse',
+                    'l’oiseau = the bird',
+                    'le lapin = the rabbit',
+                    'le poisson = the fish',
+                    'la tortue = the turtle',
+                    'la vache = the cow'
+                ].join('\n'),
+                sentences: [
+                    'Mon frère a un [chien] très gentil. = My brother has a very friendly dog.',
+                    'Le *chat* dort sur le canapé. = The cat sleeps on the sofa.',
+                    'À la ferme nous voyons un [cheval] blanc. = On the farm we see a white horse.',
+                    'Le petit *poisson* nage vite dans l’eau. = The small fish swims fast in the water.',
+                    'Ma sœur veut un [lapin] blanc. = My sister wants a white rabbit.',
+                    'La *tortue* marche lentement dans le jardin. = The turtle walks slowly in the garden.'
+                ].join('\n')
+            },
+            de: {
+                title: 'Tiere und Haustiere',
+                vocab: [
+                    'der Hund = the dog',
+                    'die Katze = the cat',
+                    'das Pferd = the horse',
+                    'der Vogel = the bird',
+                    'das Kaninchen = the rabbit',
+                    'der Fisch = the fish',
+                    'die Schildkröte = the turtle',
+                    'die Kuh = the cow'
+                ].join('\n'),
+                sentences: [
+                    'Mein Bruder hat einen netten [Hund]. = My brother has a friendly dog.',
+                    'Die *Katze* schläft auf dem Sofa. = The cat sleeps on the sofa.',
+                    'Auf dem Bauernhof sehen wir ein weißes [Pferd]. = On the farm we see a white horse.',
+                    'Der *Vogel* singt am Morgen. = The bird sings in the morning.',
+                    'Meine Schwester möchte ein kleines [Kaninchen]. = My sister wants a small rabbit.',
+                    'Der *Fisch* schwimmt schnell im Wasser. = The fish swims fast in the water.'
+                ].join('\n')
+            },
+            it: {
+                title: 'Gli animali',
+                vocab: [
+                    'il cane = the dog',
+                    'il gatto = the cat',
+                    'il cavallo = the horse',
+                    'l’uccello = the bird',
+                    'il coniglio = the rabbit',
+                    'il pesce = the fish',
+                    'la tartaruga = the turtle',
+                    'la mucca = the cow'
+                ].join('\n'),
+                sentences: [
+                    'Mio fratello ha un [cane] molto simpatico. = My brother has a very friendly dog.',
+                    'Il *gatto* dorme sul divano. = The cat sleeps on the sofa.',
+                    'Nella fattoria vediamo un [cavallo] bianco. = On the farm we see a white horse.',
+                    'Il *pesce* nuota veloce nell’acqua. = The fish swims fast in the water.',
+                    'Mia sorella vuole un [coniglio] piccolo. = My sister wants a small rabbit.',
+                    'La *tartaruga* cammina lentamente in giardino. = The turtle walks slowly in the garden.'
+                ].join('\n')
+            }
+        };
+
+        // Pre-populated deterministic ARASAAC pictures for the sample animals so pictures never flicker or change
+        const INITIAL_PICTURE_MAP = (() => {
+            const pairs = [
+                // Spanish
+                ['el perro', 2517], ['perro', 2517],
+                ['el gato', 2406], ['gato', 2406],
+                ['el caballo', 2294], ['caballo', 2294],
+                ['el pájaro', 2490], ['pájaro', 2490],
+                ['el conejo', 2351], ['conejo', 2351],
+                ['el pez', 2519], ['pez', 2519],
+                ['la tortuga', 10241], ['tortuga', 10241],
+                ['la vaca', 2609], ['vaca', 2609],
+                // French
+                ['le chien', 2517], ['chien', 2517],
+                ['le chat', 2406], ['chat', 2406],
+                ['le cheval', 2294], ['cheval', 2294],
+                ['l’oiseau', 2490], ["l'oiseau", 2490], ['oiseau', 2490],
+                ['le lapin', 2351], ['lapin', 2351],
+                ['le poisson', 2519], ['poisson', 2519],
+                ['la tortue', 10241], ['tortue', 10241],
+                ['la vache', 2609], ['vache', 2609],
+                // German
+                ['der hund', 2517], ['hund', 2517],
+                ['die katze', 2406], ['katze', 2406],
+                ['das pferd', 2294], ['pferd', 2294],
+                ['der vogel', 2490], ['vogel', 2490],
+                ['das kaninchen', 2351], ['kaninchen', 2351],
+                ['der fisch', 2519], ['fisch', 2519],
+                ['die schildkröte', 10241], ['schildkröte', 10241],
+                ['die kuh', 2609], ['kuh', 2609],
+                // Italian
+                ['il cane', 2517], ['cane', 2517],
+                ['il gatto', 2406], ['gatto', 2406],
+                ['il cavallo', 2294], ['cavallo', 2294],
+                ['l’uccello', 2490], ["l'uccello", 2490], ['uccello', 2490],
+                ['il coniglio', 2351], ['coniglio', 2351],
+                ['il pesce', 2519], ['pesce', 2519],
+                ['la tartaruga', 10241], ['tartaruga', 10241],
+                ['la mucca', 2609], ['mucca', 2609],
+            ];
+            const map = {};
+            pairs.forEach(([k, id]) => {
+                map[k] = arasaacObj(id);
+            });
+            return map;
+        })();
+
+        const GRID_SIZES = [
+            { id: 'small', label: 'Small (3x2)', limit: 6, cols: 3 },
+            { id: 'standard', label: 'Standard (3x3)', limit: 9, cols: 3 },
+            { id: 'large', label: 'Large (4x3)', limit: 12, cols: 4 },
+            { id: 'slides', label: 'Slides (5x4)', limit: 20, cols: 5 },
+        ];
+
+        const CARD_ROTATIONS = [-0.8, 0.7, -0.5, 0.9, -1.0, 0.4, -0.6, 0.8, -0.9, 0.6, -0.4, 0.7, -0.7, 0.5, -0.8, 0.9, -0.6, 0.8, -0.5, 0.7];
+        const getCardRotation = (index) => CARD_ROTATIONS[index % CARD_ROTATIONS.length];
+
+        // ==========================================
+        // 6. DECK PAGE RENDERER (Shared by Live Preview & A4 Print)
+        // ==========================================
+        function DeckPage({ page, cards, pictureMap }) {
+            const pct = (v, total) => `${(v / total) * 100}%`;
+            const ptToCqw = (pt) => `${(pt / (page.w * 72)) * 100}cqw`;
+            const inToCqw = (inch) => `${(inch / page.w) * 100}cqw`;
+            const border = (w, dash) => `max(1px, ${ptToCqw(w)}) ${dash ? 'dashed' : 'solid'}`;
+            return (
+                <div style={{
+                    position: 'relative',
+                    aspectRatio: `${page.w} / ${page.h}`,
+                    background: `#${page.bg || 'FFFFFF'}`,
+                    containerType: 'inline-size',
+                    overflow: 'hidden',
+                    border: '2px solid var(--navy)',
+                    borderRadius: 8,
+                    boxShadow: '4px 4px 0 var(--navy)',
+                    width: '100%',
+                }}>
+                    {page.els.map((el, i) => {
+                        const base = { position: 'absolute', left: pct(el.x, page.w), top: pct(el.y, page.h) };
+                        if (el.t === 'text') {
+                            return (
+                                <div key={i} style={{
+                                    ...base,
+                                    width: pct(el.w, page.w),
+                                    height: pct(el.h, page.h),
+                                    display: 'flex',
+                                    alignItems: el.valign === 'top' ? 'flex-start' : el.valign === 'bottom' ? 'flex-end' : 'center',
+                                    justifyContent: el.align === 'center' ? 'center' : el.align === 'right' ? 'flex-end' : 'flex-start',
+                                    textAlign: el.align,
+                                    fontSize: ptToCqw(el.pt),
+                                    lineHeight: 1.2,
+                                    color: `#${el.color}`,
+                                    fontFamily: el.mono ? '"Courier New", Courier, monospace' : '"DM Sans", Arial, Helvetica, sans-serif',
+                                    fontWeight: el.bold ? 700 : 400,
+                                    fontStyle: el.italic ? 'italic' : 'normal',
+                                    whiteSpace: 'pre-wrap',
+                                    background: el.fill ? `#${el.fill}` : 'transparent'
+                                }}>
+                                    <span style={{ width: '100%' }}>{el.text}</span>
+                                </div>
+                            );
+                        }
+                        if (el.t === 'rect') {
+                            return (
+                                <div key={i} style={{
+                                    ...base,
+                                    width: pct(el.w, page.w),
+                                    height: pct(el.h, page.h),
+                                    boxSizing: 'border-box',
+                                    background: el.fill ? `#${el.fill}` : 'transparent',
+                                    border: el.line ? border(el.lineW, el.dash).replace(/ (solid|dashed)$/, ` $1 #${el.line}`) : 'none',
+                                    borderRadius: el.radius ? inToCqw(el.radius) : 0
+                                }} />
+                            );
+                        }
+                        if (el.t === 'line') {
+                            return <div key={i} style={{ ...base, width: pct(el.w, page.w), height: 0, borderTop: `${border(el.lineW, el.dash)} #${el.color}` }} />;
+                        }
+                        if (el.t === 'vline') {
+                            return <div key={i} style={{ ...base, width: 0, height: pct(el.h, page.h), borderLeft: `${border(el.lineW, el.dash)} #${el.color}` }} />;
+                        }
+                        if (el.t === 'img') {
+                            const src = el.imageUrl || (cards && cards[el.card] && cards[el.card].image);
+                            if (!src) return null;
+                            return <img key={i} src={src} alt="" style={{ ...base, width: pct(el.w, page.w), height: pct(el.h, page.h), objectFit: 'contain' }} />;
+                        }
+                        return null;
+                    })}
+                </div>
+            );
+        }
+
+        // ==========================================
+        // 7. MAIN PICTORIO WORKSHEETS APPLICATION
+        // ==========================================
+        const getInitialSavedState = () => {
+            try {
+                const raw = localStorage.getItem(WORKSHEET_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') return parsed;
+                }
+            } catch (e) {}
+            return null;
+        };
+
+        function PictorioApp() {
+            const saved = useMemo(() => getInitialSavedState(), []);
+
+            // Core Inputs & Settings (Saved to localStorage)
+            const [lang, setLang] = useState(() => saved?.lang ?? 'es');
+            const [customLangName, setCustomLangName] = useState(() => saved?.customLangName ?? '');
+            const [boxAText, setBoxAText] = useState(() => saved?.boxAText ?? EXAMPLES.es.vocab);
+            const [boxBText, setBoxBText] = useState(() => saved?.boxBText ?? EXAMPLES.es.sentences);
+            const [withPictures, setWithPictures] = useState(() => saved?.withPictures !== undefined ? saved.withPictures : true);
+            const [seed, setSeed] = useState(() => saved?.seed ?? 1234);
+
+            // Text handling options (Section 4)
+            const [removeArticles, setRemoveArticles] = useState(() => saved?.removeArticles !== undefined ? saved.removeArticles : true);
+            const [removeAccents, setRemoveAccents] = useState(() => saved?.removeAccents !== undefined ? saved.removeAccents : false);
+            const [showTargetRubric, setShowTargetRubric] = useState(() => saved?.showTargetRubric !== undefined ? saved.showTargetRubric : true);
+
+            // Worksheet header & builder state (Section 6)
+            const [worksheetTitle, setWorksheetTitle] = useState(() => saved?.worksheetTitle ?? EXAMPLES.es.title);
+            const [classLine, setClassLine] = useState(() => saved?.classLine ?? '');
+            const [selectedTasks, setSelectedTasks] = useState(() => saved?.selectedTasks ?? ['wordsearch', 'matching', 'sentence_gapfill', 'jumbled_sentences']);
+            const [taskSettings, setTaskSettings] = useState(() => ({
+                ...window.PictorioDeck.DEFAULT_TASK_SETTINGS,
+                ...(saved?.taskSettings || {}),
+            }));
+
+            // Persistent picture dictionary keyed by lowercase word/keyword so pictures never change by themselves
+            const [pictureMap, setPictureMap] = useState(() => ({
+                ...INITIAL_PICTURE_MAP,
+                ...(saved?.pictureMap || {}),
+            }));
+
+            // Flashcard Grid & Preview Modes
+            const [gridConfig, setGridConfig] = useState(() => saved?.gridConfig || GRID_SIZES[1]);
+            const [labelMode, setLabelMode] = useState(() => saved?.labelMode || 'full'); // 'full' | 'scaffold' | 'blank'
+            const [showEnglishOnCards, setShowEnglishOnCards] = useState(() => !!saved?.showEnglishOnCards);
+            const [slideRatio, setSlideRatio] = useState(() => saved?.slideRatio || '16:9');
+            const [previewMode, setPreviewMode] = useState('student'); // 'student' | 'answer' | 'both' | 'slides'
+            const [showCardsSection, setShowCardsSection] = useState(true);
+            const [confirmClear, setConfirmClear] = useState(false);
+
+            // Drag & drop task reordering state
+            const [draggedTaskId, setDraggedTaskId] = useState(null);
+
+            // Status & Feedback banners
+            const [loadingImages, setLoadingImages] = useState(false);
+            const [errorMessage, setErrorMessage] = useState('');
+            const [warningMessage, setWarningMessage] = useState('');
+            const [successMessage, setSuccessMessage] = useState('');
+
+            // Picture Picker modal: { wordKey, displayWord, searchTerm, loading, groups }
+            const [picker, setPicker] = useState(null);
+
+            // Activity log & attributions accordion
+            const [logs, setLogs] = useState([]);
+            const [showLogDrawer, setShowLogDrawer] = useState(false);
+            const [showAttributionsPanel, setShowAttributionsPanel] = useState(false);
+            const [copiedAttributions, setCopiedAttributions] = useState(false);
+            const [exportingFormat, setExportingFormat] = useState(null); // 'worksheet' | 'slides' | null
+
+            const logUiError = (message, type = 'warning', provider = 'General', term = '') => {
+                const newEntry = {
+                    id: Date.now() + Math.random(),
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    message,
+                    type,
+                    provider,
+                    term
+                };
+                setLogs(prev => [newEntry, ...prev.slice(0, 24)]);
+            };
+
+            // Persist all inputs, settings, seed, and chosen pictures to localStorage (Section 9)
+            useEffect(() => {
+                try {
+                    const payload = {
+                        lang,
+                        customLangName,
+                        boxAText,
+                        boxBText,
+                        withPictures,
+                        seed,
+                        removeArticles,
+                        removeAccents,
+                        showTargetRubric,
+                        worksheetTitle,
+                        classLine,
+                        selectedTasks,
+                        taskSettings,
+                        pictureMap,
+                        gridConfig,
+                        labelMode,
+                        showEnglishOnCards,
+                        slideRatio,
+                    };
+                    localStorage.setItem(WORKSHEET_STORAGE_KEY, JSON.stringify(payload));
+                } catch (e) {}
+            }, [
+                lang, customLangName, boxAText, boxBText, withPictures, seed,
+                removeArticles, removeAccents, showTargetRubric, worksheetTitle,
+                classLine, selectedTasks, taskSettings, pictureMap, gridConfig,
+                labelMode, showEnglishOnCards, slideRatio
+            ]);
+
+            // Parse Box A & Box B deterministically
+            const parsedBoxA = useMemo(() => window.PictorioDeck.parseVocabulary(boxAText), [boxAText]);
+            const parsedBoxB = useMemo(() => window.PictorioDeck.parseSentences(boxBText), [boxBText]);
+
+            // Automatic Picture Resolver when `withPictures` is ON:
+            // Only looks up words or *keywords* that don't yet have a stored entry in `pictureMap`.
+            // When `withPictures` is OFF, NO picture search runs at all (Acceptance Check #7).
+            const pendingLookupsRef = useRef(new Set());
+            useEffect(() => {
+                if (!withPictures) return;
+
+                const toLookup = [];
+                parsedBoxA.items.forEach(item => {
+                    const key = item.target.toLowerCase().trim();
+                    if (key && !pictureMap[key] && !pendingLookupsRef.current.has(key)) {
+                        toLookup.push({ key, target: item.target, english: item.english });
+                    }
+                });
+                parsedBoxB.items.forEach(sent => {
+                    if (sent.pictureKeyword) {
+                        const key = sent.pictureKeyword.toLowerCase().trim();
+                        const stripped = window.PictorioDeck.stripArticle(key);
+                        if (key && !pictureMap[key] && !pictureMap[stripped] && !pendingLookupsRef.current.has(key)) {
+                            toLookup.push({ key, target: sent.pictureKeyword, english: sent.english });
+                        }
+                    }
+                });
+
+                if (toLookup.length === 0) return;
+
+                let cancelled = false;
+                const timer = setTimeout(async () => {
+                    setLoadingImages(true);
+                    const foundUpdates = {};
+                    await Promise.all(toLookup.map(entry => cardConcurrency.run(async () => {
+                        pendingLookupsRef.current.add(entry.key);
+                        try {
+                            const res = await resolveImageFallback(entry.english || entry.target, 1, logUiError, entry.target, lang);
+                            if (res && res.url) {
+                                foundUpdates[entry.key] = {
+                                    ...res,
+                                    image: res.url,
+                                    searchTerm: entry.english || entry.target,
+                                    imagePage: 1,
+                                };
+                            }
+                        } finally {
+                            pendingLookupsRef.current.delete(entry.key);
+                        }
+                    })));
+                    if (!cancelled && Object.keys(foundUpdates).length > 0) {
+                        setPictureMap(prev => ({ ...prev, ...foundUpdates }));
+                    }
+                    if (!cancelled) setLoadingImages(false);
+                }, 320);
+
+                return () => {
+                    cancelled = true;
+                    clearTimeout(timer);
+                };
+            }, [withPictures, parsedBoxA.items, parsedBoxB.items, lang, pictureMap]);
+
+            // Build the cards array for the Flashcard Grid & Deck Engine
+            const cards = useMemo(() => {
+                return parsedBoxA.items.map((item, idx) => {
+                    const key = item.target.toLowerCase().trim();
+                    const strippedKey = window.PictorioDeck.stripArticle(key);
+                    const pic = withPictures ? (pictureMap[key] || pictureMap[strippedKey] || null) : null;
+                    return {
+                        index: idx,
+                        wordKey: key,
+                        word: item.target,
+                        target: item.target,
+                        searchTerm: item.english || item.target,
+                        english: item.english,
+                        image: pic ? (pic.image || pic.url) : null,
+                        provider: pic ? (pic.provider || 'None') : 'None',
+                        providerKey: pic ? (pic.providerKey || '') : '',
+                        license: pic ? (pic.license || '') : '',
+                        author: pic ? (pic.author || '') : '',
+                        attribution: pic ? (pic.attribution || '') : '',
+                        sourceUrl: pic ? (pic.sourceUrl || '') : '',
+                        imagePage: pic ? (pic.imagePage || 1) : 1,
+                        fromCache: !!(pic && pic.fromCache),
+                        history: pic?.history || [],
+                    };
+                });
+            }, [parsedBoxA.items, pictureMap, withPictures]);
+
+            // Extra sentence *keyword* cards not already in Box A
+            const extraKeywordCards = useMemo(() => {
+                if (!withPictures) return [];
+                const boxAKeys = new Set(parsedBoxA.items.flatMap(it => {
+                    const k = it.target.toLowerCase().trim();
+                    return [k, window.PictorioDeck.stripArticle(k)];
+                }));
+                const extras = [];
+                const seen = new Set();
+                parsedBoxB.items.forEach(s => {
+                    if (!s.pictureKeyword) return;
+                    const k = s.pictureKeyword.toLowerCase().trim();
+                    const stripped = window.PictorioDeck.stripArticle(k);
+                    if (boxAKeys.has(k) || boxAKeys.has(stripped) || seen.has(k)) return;
+                    seen.add(k);
+                    const pic = pictureMap[k] || pictureMap[stripped] || null;
+                    extras.push({
+                        wordKey: k,
+                        word: s.pictureKeyword,
+                        searchTerm: s.english || s.pictureKeyword,
+                        image: pic ? (pic.image || pic.url) : null,
+                        provider: pic ? (pic.provider || 'None') : 'None',
+                        license: pic ? (pic.license || '') : '',
+                        author: pic ? (pic.author || '') : '',
+                        attribution: pic ? (pic.attribution || '') : '',
+                        imagePage: pic ? (pic.imagePage || 1) : 1,
+                        history: pic?.history || [],
+                    });
+                });
+                return extras;
+            }, [withPictures, parsedBoxA.items, parsedBoxB.items, pictureMap]);
+
+            // Build live deterministic Worksheet Deck and Slides Deck
+            const worksheetDeck = useMemo(() => {
+                return window.PictorioDeck.buildWorksheetDeck({
+                    format: 'worksheet',
+                    slideRatio,
+                    lang,
+                    customLangName,
+                    title: worksheetTitle,
+                    classLine,
+                    seed,
+                    withPictures,
+                    vocab: parsedBoxA.items,
+                    sentences: parsedBoxB.items,
+                    cards,
+                    pictureMap,
+                    removeArticles,
+                    removeAccents,
+                    showTargetRubric,
+                    selectedTasks,
+                    taskSettings,
+                });
+            }, [
+                slideRatio, lang, customLangName, worksheetTitle, classLine, seed,
+                withPictures, parsedBoxA.items, parsedBoxB.items, cards, pictureMap,
+                removeArticles, removeAccents, showTargetRubric, selectedTasks, taskSettings
+            ]);
+
+            const slidesDeck = useMemo(() => {
+                return window.PictorioDeck.buildWorksheetDeck({
+                    format: 'slides',
+                    slideRatio,
+                    lang,
+                    customLangName,
+                    title: worksheetTitle,
+                    classLine,
+                    seed,
+                    withPictures,
+                    vocab: parsedBoxA.items,
+                    sentences: parsedBoxB.items,
+                    cards,
+                    pictureMap,
+                    removeArticles,
+                    removeAccents,
+                    showTargetRubric,
+                    selectedTasks,
+                    taskSettings,
+                });
+            }, [
+                slideRatio, lang, customLangName, worksheetTitle, classLine, seed,
+                withPictures, parsedBoxA.items, parsedBoxB.items, cards, pictureMap,
+                removeArticles, removeAccents, showTargetRubric, selectedTasks, taskSettings
+            ]);
+
+            // Picture manipulation helpers (stored by wordKey in pictureMap)
+            const applyPictureToKey = (wordKey, imgData, extra = {}) => {
+                const k = (wordKey || '').toLowerCase().trim();
+                if (!k) return;
+                setPictureMap(prev => {
+                    const existing = prev[k] || {};
+                    const history = existing.image
+                        ? [...(existing.history || []), {
+                            image: existing.image,
+                            url: existing.url,
+                            provider: existing.provider,
+                            providerKey: existing.providerKey,
+                            license: existing.license,
+                            author: existing.author,
+                            attribution: existing.attribution,
+                            sourceUrl: existing.sourceUrl,
+                            imagePage: existing.imagePage,
+                            searchTerm: existing.searchTerm,
+                        }].slice(-15)
+                        : (existing.history || []);
+                    return {
+                        ...prev,
+                        [k]: {
+                            ...imgData,
+                            image: imgData.url || imgData.image,
+                            url: imgData.url || imgData.image,
+                            history,
+                            ...extra,
+                        }
+                    };
+                });
+            };
+
+            const undoPictureForKey = (wordKey) => {
+                const k = (wordKey || '').toLowerCase().trim();
+                setPictureMap(prev => {
+                    const existing = prev[k];
+                    if (!existing || !existing.history || existing.history.length === 0) return prev;
+                    const last = existing.history[existing.history.length - 1];
+                    const nextHistory = existing.history.slice(0, -1);
+                    return {
+                        ...prev,
+                        [k]: {
+                            ...last,
+                            history: nextHistory,
+                        }
+                    };
+                });
+            };
+
+            const handleRefreshCardImage = async (card) => {
+                if (!withPictures) return;
+                const nextPage = (card.imagePage || 1) + 1;
+                const imgData = await resolveImageFallback(card.searchTerm, nextPage, logUiError, card.word, lang);
+                if (imgData && imgData.url) {
+                    applyPictureToKey(card.wordKey, imgData, { imagePage: nextPage, searchTerm: card.searchTerm });
+                } else {
+                    logUiError(`No alternative image found for "${card.word}" on page ${nextPage}.`, "info", "Refresh", card.word);
+                }
+            };
+
+            const handleUploadCardImage = (wordKey, event) => {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (reader.result) {
+                        applyPictureToKey(wordKey, {
+                            url: reader.result,
+                            image: reader.result,
+                            provider: 'Upload',
+                            providerKey: 'upload',
+                            license: 'User Provided',
+                            author: 'Teacher upload',
+                            attribution: `Uploaded image (${file.name})`,
+                            sourceUrl: '',
+                            fromCache: false,
+                        });
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const runPickerSearch = async (wordKey, displayWord, query) => {
+                const q = (query || '').trim();
+                if (!q) return;
+                setPicker({ wordKey, displayWord, query: q, loading: true, groups: [] });
+                const [arasaac, pixV, wiki, openv, pixI] = await Promise.all([
+                    listArasaac(q, lang),
+                    listPixabay(q, 'vector'),
+                    listWikimedia(q),
+                    listOpenverse(q),
+                    listPixabay(q, 'illustration'),
+                ]);
+                const groups = [
+                    { name: 'ARASAAC pictograms', note: 'CC BY-NC-SA: free classroom use only', items: arasaac },
+                    { name: 'Pixabay drawings', note: 'Pixabay Licence', items: [...pixV, ...pixI] },
+                    { name: 'Wikimedia Commons', note: 'Licence varies: check the credit', items: wiki },
+                    { name: 'Openverse', note: 'Licence varies: check the credit', items: openv },
+                ];
+                setPicker(p => (p && p.wordKey === wordKey && p.query === q ? { ...p, loading: false, groups } : p));
+            };
+
+            useEffect(() => {
+                if (!picker) return;
+                const onKey = (e) => { if (e.key === 'Escape') setPicker(null); };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            }, [picker]);
+
+            // Task list actions: tick/untick, reorder, per-task setting update, Quick Worksheet
+            const toggleTask = (taskId) => {
+                setSelectedTasks(prev => {
+                    if (prev.includes(taskId)) return prev.filter(id => id !== taskId);
+                    return [...prev, taskId];
+                });
+            };
+
+            const moveTask = (index, direction) => {
+                setSelectedTasks(prev => {
+                    const targetIndex = index + direction;
+                    if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+                    const copy = prev.slice();
+                    const [item] = copy.splice(index, 1);
+                    copy.splice(targetIndex, 0, item);
+                    return copy;
+                });
+            };
+
+            const handleDropTask = (targetTaskId) => {
+                if (!draggedTaskId || draggedTaskId === targetTaskId) return;
+                setSelectedTasks(prev => {
+                    const fromIdx = prev.indexOf(draggedTaskId);
+                    const toIdx = prev.indexOf(targetTaskId);
+                    if (fromIdx < 0 || toIdx < 0) return prev;
+                    const copy = prev.slice();
+                    copy.splice(fromIdx, 1);
+                    copy.splice(toIdx, 0, draggedTaskId);
+                    return copy;
+                });
+                setDraggedTaskId(null);
+            };
+
+            const updateTaskSetting = (taskId, key, val) => {
+                setTaskSettings(prev => ({
+                    ...prev,
+                    [taskId]: {
+                        ...(prev[taskId] || {}),
+                        [key]: val,
+                    }
+                }));
+            };
+
+            // Section 6: "One click on 'Quick worksheet' adds a sensible default set:
+            // word search + matching + gap fill + jumbled sentences (skipping any that can't run)."
+            const handleQuickWorksheet = () => {
+                const defaultSet = ['wordsearch', 'matching', 'sentence_gapfill', 'jumbled_sentences'];
+                const runnable = defaultSet.filter(tId => {
+                    const avail = window.PictorioDeck.getTaskAvailability(tId, {
+                        vocab: parsedBoxA.items,
+                        sentences: parsedBoxB.items,
+                        withPictures,
+                    });
+                    return avail.available;
+                });
+                setSelectedTasks(runnable);
+                setSuccessMessage('Quick worksheet ready: ' + (runnable.length ? `${runnable.length} tasks added.` : 'Add vocabulary or sentences first.'));
+                setTimeout(() => setSuccessMessage(''), 2500);
+            };
+
+            // Load a language example
+            const handleLoadExample = (langCode) => {
+                const ex = EXAMPLES[langCode] || EXAMPLES.es;
+                setLang(langCode);
+                setWorksheetTitle(ex.title);
+                setBoxAText(ex.vocab);
+                setBoxBText(ex.sentences);
+                setPictureMap(prev => ({ ...INITIAL_PICTURE_MAP, ...prev }));
+            };
+
+            // Clear all with confirm step (Section 9)
+            const handleConfirmClearAll = () => {
+                try {
+                    localStorage.removeItem(WORKSHEET_STORAGE_KEY);
+                } catch (e) {}
+                setLang('es');
+                setCustomLangName('');
+                setWorksheetTitle(EXAMPLES.es.title);
+                setClassLine('');
+                setBoxAText(EXAMPLES.es.vocab);
+                setBoxBText(EXAMPLES.es.sentences);
+                setWithPictures(true);
+                setRemoveArticles(true);
+                setRemoveAccents(false);
+                setShowTargetRubric(true);
+                setSeed(1234);
+                setSelectedTasks(['wordsearch', 'matching', 'sentence_gapfill', 'jumbled_sentences']);
+                setTaskSettings(window.PictorioDeck.DEFAULT_TASK_SETTINGS);
+                setPictureMap(INITIAL_PICTURE_MAP);
+                setConfirmClear(false);
+                setSuccessMessage('Reset to default Spanish example.');
+                setTimeout(() => setSuccessMessage(''), 2500);
+            };
+
+            // PowerPoint Export (Worksheet A4 or Slides 16:9 / 4:3)
+            const prepareImageForPptx = (dataUrl) => new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const w = img.naturalWidth, h = img.naturalHeight;
+                    const scale = Math.max(w, h) > 900 ? 800 / Math.max(w, h) : 1;
+                    if (scale >= 1 || /^data:image\/svg/.test(dataUrl)) return resolve({ data: dataUrl, w, h });
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = Math.round(w * scale);
+                        c.height = Math.round(h * scale);
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        const jpeg = /^data:image\/jpe?g/.test(dataUrl);
+                        resolve({ data: c.toDataURL(jpeg ? 'image/jpeg' : 'image/png', 0.88), w: c.width, h: c.height });
+                    } catch (e) {
+                        resolve({ data: dataUrl, w, h });
+                    }
+                };
+                img.onerror = () => resolve({ data: dataUrl, w: 0, h: 0 });
+                img.src = dataUrl;
+            });
+
+            const handleExportPptx = async (format) => {
+                if (!window.PptxGenJS || !window.PictorioDeck) return;
+                setErrorMessage('');
+                setWarningMessage('');
+                setSuccessMessage('');
+                setExportingFormat(format);
+                try {
+                    const targetDeck = format === 'slides' ? slidesDeck : worksheetDeck;
+                    const urlsToFetch = new Set();
+                    targetDeck.pages.forEach(p => {
+                        p.els.forEach(el => {
+                            if (el.t === 'img') {
+                                const u = el.imageUrl || (cards[el.card] && cards[el.card].image);
+                                if (u) urlsToFetch.add(u);
+                            }
+                        });
+                    });
+
+                    const imagesLookup = {};
+                    await Promise.all(Array.from(urlsToFetch).map(async (url) => {
+                        const b64 = await fetchImageAsBase64(url);
+                        if (b64) {
+                            imagesLookup[url] = await prepareImageForPptx(b64);
+                        }
+                    }));
+                    cards.forEach((c, i) => {
+                        if (c.image && imagesLookup[c.image]) {
+                            imagesLookup[i] = imagesLookup[c.image];
+                        }
+                    });
+
+                    const layout = format === 'slides'
+                        ? (slideRatio === '4:3' ? 'PICTORIO_4x3' : 'PICTORIO_16x9')
+                        : 'A4_PORTRAIT';
+                    const pptx = window.PictorioDeck.toPptx(targetDeck, imagesLookup, window.PptxGenJS, layout);
+                    const safeTitle = (worksheetTitle || 'Pictorio_Worksheet')
+                        .replace(/[^\p{L}\p{N} _-]+/gu, '')
+                        .trim()
+                        .replace(/\s+/g, '_') || 'Pictorio_Worksheet';
+                    await pptx.writeFile({ fileName: `${safeTitle}_v${seed}_${format === 'slides' ? 'Slides' : 'Worksheet'}.pptx` });
+                    setSuccessMessage(`${format === 'slides' ? 'PowerPoint Slides' : 'PowerPoint Worksheet'} downloaded (Version #${seed})`);
+                    setTimeout(() => setSuccessMessage(''), 3500);
+                } catch (err) {
+                    setErrorMessage(`PowerPoint export error: ${err.message}`);
+                } finally {
+                    setExportingFormat(null);
+                }
+            };
+
+            const handlePrintWorksheet = () => {
+                window.print();
+            };
+
+            const cardsWithAttribution = cards.filter(c => c.image && (c.attribution || c.license));
+
+            const handleCopyAttributions = async () => {
+                if (cardsWithAttribution.length === 0) return;
+                const textLines = cardsWithAttribution.map(c => `${c.word} — ${c.attribution || c.license || c.provider}`);
+                try {
+                    await navigator.clipboard.writeText(textLines.join('\n'));
+                    setCopiedAttributions(true);
+                    setTimeout(() => setCopiedAttributions(false), 2000);
+                } catch (err) {
+                    setErrorMessage(`Failed to copy attributions: ${err.message}`);
+                }
+            };
+
+            // Pages shown in the live preview panel
+            const previewPages = useMemo(() => {
+                if (previewMode === 'slides') return slidesDeck.pages;
+                if (previewMode === 'answer') return worksheetDeck.answerPages;
+                if (previewMode === 'both') return [...worksheetDeck.studentPages, ...worksheetDeck.answerPages];
+                return worksheetDeck.studentPages;
+            }, [previewMode, worksheetDeck, slidesDeck]);
+
+            // Missing translations warnings (Section 1: "No auto-translation. The teacher always gives both languages. If a translation is missing, show a warning. Never guess.")
+            const missingTranslationWarnings = useMemo(() => {
+                const msgs = [];
+                if (parsedBoxA.missingEnglishCount > 0) {
+                    const missingWords = parsedBoxA.items.filter(i => i.missingEnglish).map(i => `"${i.target}"`).slice(0, 5).join(', ');
+                    msgs.push(`Box A has ${parsedBoxA.missingEnglishCount} ${parsedBoxA.missingEnglishCount === 1 ? 'word' : 'words'} without an English translation (${missingWords}). No auto-translation is used.`);
+                }
+                if (parsedBoxB.missingEnglishCount > 0) {
+                    msgs.push(`Box B has ${parsedBoxB.missingEnglishCount} ${parsedBoxB.missingEnglishCount === 1 ? 'sentence' : 'sentences'} without an English translation. No auto-translation is used.`);
+                }
+                return msgs;
+            }, [parsedBoxA, parsedBoxB]);
+
+            return (
+                <div className="flex flex-col items-center min-h-screen pb-20 bg-[var(--cream)]">
+
+                    {/* =========================================================
+                        PRINT-ONLY A4 VIEW: Student Pages then Answer Key Pages
+                       ========================================================= */}
+                    <div className="print-only-root">
+                        {[...worksheetDeck.studentPages, ...worksheetDeck.answerPages].map((page, idx) => (
+                            <div key={idx} className="a4-print-page">
+                                <DeckPage page={page} cards={cards} pictureMap={pictureMap} />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* =========================================================
+                        HEADER BAR (Screen Only)
+                       ========================================================= */}
+                    <header className="w-full bg-[var(--cream)] pt-7 pb-5 no-print">
+                        <div className="app-container flex flex-col lg:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 flex-wrap justify-center lg:justify-start">
+                                <div className="relative inline-block">
+                                    <h1 className="heading-1 text-[var(--navy)] tracking-tight">
+                                        Pictorio Worksheets
+                                    </h1>
+                                    <div className="h-[7px] bg-[var(--orange)] border-[1.5px] border-[var(--navy)] rounded-full mt-1 w-[86%]"></div>
+                                </div>
+                                <span
+                                    className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full border-[2.5px] border-[var(--navy)] bg-[var(--mustard)] text-[var(--navy)] shadow-[3px_3px_0_var(--navy)] select-none"
+                                    style={{ transform: 'rotate(-5deg)' }}
+                                >
+                                    Deterministic
+                                </span>
+                            </div>
+
+                            {/* Top Global Controls: With/Without Pictures + Seed Version # + Clear All */}
+                            <div className="flex items-center gap-3 flex-wrap justify-center">
+                                {/* Pictures On / Off Toggle (Section 3) */}
+                                <div className="inline-flex rounded-[10px] border-[2.5px] border-[var(--navy)] bg-[var(--paper)] p-1 shadow-[3px_3px_0_var(--navy)]" role="group" aria-label="Pictures toggle">
+                                    <button
+                                        type="button"
+                                        onClick={() => setWithPictures(true)}
+                                        className={`px-3 py-1.5 rounded-[7px] text-xs font-bold transition-colors cursor-pointer ${withPictures ? 'bg-[var(--mustard)] text-[var(--navy)] border-[1.5px] border-[var(--navy)]' : 'text-[var(--navy)] opacity-75 hover:opacity-100'}`}
+                                    >
+                                        🖼️ With pictures
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWithPictures(false)}
+                                        className={`px-3 py-1.5 rounded-[7px] text-xs font-bold transition-colors cursor-pointer ${!withPictures ? 'bg-[var(--mustard)] text-[var(--navy)] border-[1.5px] border-[var(--navy)]' : 'text-[var(--navy)] opacity-75 hover:opacity-100'}`}
+                                    >
+                                        🔤 Without pictures
+                                    </button>
+                                </div>
+
+                                {/* Seed Control: "Version #1234" + "New version" button (Section 1) */}
+                                <div className="inline-flex items-center gap-2 bg-[var(--paper)] border-[2.5px] border-[var(--navy)] rounded-[10px] px-3 py-1.5 shadow-[3px_3px_0_var(--navy)]">
+                                    <label htmlFor="seed-input" className="text-xs font-bold text-[var(--navy)] whitespace-nowrap">
+                                        Version #
+                                    </label>
+                                    <input
+                                        id="seed-input"
+                                        type="number"
+                                        min="1"
+                                        max="999999"
+                                        value={seed}
+                                        onChange={(e) => {
+                                            const v = parseInt(e.target.value, 10);
+                                            setSeed(Number.isFinite(v) && v > 0 ? v : 1);
+                                        }}
+                                        className="w-20 px-2 py-1 text-xs font-mono font-bold bg-[var(--cream)] border-[1.5px] border-[var(--navy)] rounded text-[var(--navy)] focus:outline-none"
+                                        aria-label="Worksheet version seed"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setSeed(prev => (Number(prev) || 1) + 1)}
+                                        className="px-2.5 py-1 text-xs font-bold bg-[var(--orange)] text-[var(--cream)] border-[1.5px] border-[var(--navy)] rounded hover:opacity-90 cursor-pointer whitespace-nowrap"
+                                        title="Change seed to generate a new deterministic version"
+                                    >
+                                        New version
+                                    </button>
+                                </div>
+
+                                {/* Clear All with Inline Confirmation (Section 9) */}
+                                {!confirmClear ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmClear(true)}
+                                        className="btn-chunky btn-secondary-chunky text-xs h-10 px-3"
+                                    >
+                                        Clear all
+                                    </button>
+                                ) : (
+                                    <div className="inline-flex items-center gap-1.5 bg-[var(--mustard)] border-[2.5px] border-[var(--navy)] rounded-[10px] px-2.5 py-1 shadow-[3px_3px_0_var(--navy)]">
+                                        <span className="text-xs font-bold text-[var(--navy)]">Reset worksheet?</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleConfirmClearAll}
+                                            className="px-2 py-1 text-xs font-bold bg-[var(--orange)] text-[var(--cream)] border-[1.5px] border-[var(--navy)] rounded cursor-pointer"
+                                        >
+                                            Yes, reset
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmClear(false)}
+                                            className="px-2 py-1 text-xs font-bold bg-[var(--paper)] text-[var(--navy)] border-[1.5px] border-[var(--navy)] rounded cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="app-container no-print space-y-6">
+
+                        {/* --- STATUS & WARNING BANNERS --- */}
+                        {successMessage && (
+                            <div className="msg-box msg-success justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold">✓ {successMessage}</span>
+                                </div>
+                                <button onClick={() => setSuccessMessage('')} className="font-bold px-2 py-0.5 cursor-pointer text-[var(--cream)]">✕</button>
+                            </div>
+                        )}
+
+                        {errorMessage && (
+                            <div className="msg-box msg-error justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold">✕ {errorMessage}</span>
+                                </div>
+                                <button onClick={() => setErrorMessage('')} className="font-bold px-2 py-0.5 cursor-pointer text-[var(--cream)]">✕</button>
+                            </div>
+                        )}
+
+                        {(missingTranslationWarnings.length > 0 || worksheetDeck.warnings.length > 0) && (
+                            <div className="msg-box msg-warning flex-col items-start gap-1">
+                                {missingTranslationWarnings.map((w, i) => (
+                                    <div key={`mt-${i}`} className="flex items-center gap-2 font-bold text-xs">
+                                        <span>⚠️</span>
+                                        <span>{w}</span>
+                                    </div>
+                                ))}
+                                {worksheetDeck.warnings.map((w, i) => (
+                                    <div key={`pw-${i}`} className="flex items-center gap-2 font-bold text-xs">
+                                        <span>⚠️</span>
+                                        <span>{w}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* =========================================================
+                            SECTION 2: INPUTS PANEL (Target Language + Box A + Box B + Text Rules)
+                           ========================================================= */}
+                        <section className="kind-panel p-5">
+                            {/* Top Row: Target Language Selector & Preloaded Language Examples */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-4 border-b-[2px] border-[var(--navy)]">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <label htmlFor="target-lang-select" className="text-sm font-bold text-[var(--navy)]">
+                                        Target language:
+                                    </label>
+                                    <select
+                                        id="target-lang-select"
+                                        value={lang}
+                                        onChange={(e) => setLang(e.target.value)}
+                                        className="select-chunky text-sm"
+                                    >
+                                        <option value="es">Spanish</option>
+                                        <option value="fr">French</option>
+                                        <option value="de">German</option>
+                                        <option value="it">Italian</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                    {lang === 'other' && (
+                                        <input
+                                            type="text"
+                                            value={customLangName}
+                                            onChange={(e) => setCustomLangName(e.target.value)}
+                                            placeholder="Language name (e.g. Portuguese)"
+                                            className="textarea-chunky px-3 py-1.5 text-sm font-bold w-56"
+                                            aria-label="Custom target language name"
+                                        />
+                                    )}
+                                    <span className="text-xs font-bold text-[var(--navy)] opacity-70">
+                                        Support language: English
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="overline-text text-[var(--navy)]">Load example:</span>
+                                    {[['es', 'Spanish'], ['fr', 'French'], ['de', 'German'], ['it', 'Italian']].map(([code, name]) => (
+                                        <button
+                                            key={code}
+                                            type="button"
+                                            onClick={() => handleLoadExample(code)}
+                                            className={`grid-pill ${lang === code && boxAText === EXAMPLES[code].vocab ? 'grid-pill-selected' : 'grid-pill-unselected'}`}
+                                        >
+                                            {name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Two Input Boxes Side-by-Side */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                {/* Box A: Vocabulary */}
+                                <div className="flex flex-col">
+                                    <div className="flex items-baseline justify-between mb-1.5">
+                                        <label htmlFor="box-a-input" className="font-heading text-lg text-[var(--navy)]">
+                                            Box A: Vocabulary <span className="text-xs font-sans font-bold opacity-70">(one item per line, Target = English)</span>
+                                        </label>
+                                    </div>
+                                    <textarea
+                                        id="box-a-input"
+                                        className="w-full p-3.5 textarea-chunky font-mono text-xs sm:text-sm resize-y min-h-[170px]"
+                                        rows={8}
+                                        value={boxAText}
+                                        onChange={(e) => setBoxAText(e.target.value)}
+                                        placeholder="el perro = the dog&#10;el gato = the cat"
+                                    />
+                                    <div className="mt-2 flex items-center justify-between flex-wrap gap-2 text-xs">
+                                        <span className="font-bold text-[var(--teal)]" data-testid="box-a-report">
+                                            {parsedBoxA.report}
+                                        </span>
+                                        <span className="text-[var(--navy)] opacity-70 font-medium">
+                                            Use <b>=</b> or <b>Tab</b> between target word and English
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Box B: Sentences */}
+                                <div className="flex flex-col">
+                                    <div className="flex items-baseline justify-between mb-1.5">
+                                        <label htmlFor="box-b-input" className="font-heading text-lg text-[var(--navy)]">
+                                            Box B: Sentences <span className="text-xs font-sans font-bold opacity-70">(one per line, [gap] and *picture*)</span>
+                                        </label>
+                                    </div>
+                                    <textarea
+                                        id="box-b-input"
+                                        className="w-full p-3.5 textarea-chunky font-mono text-xs sm:text-sm resize-y min-h-[170px]"
+                                        rows={8}
+                                        value={boxBText}
+                                        onChange={(e) => setBoxBText(e.target.value)}
+                                        placeholder="Mi hermano tiene un [perro]. = My brother has a dog.&#10;El *gato* duerme en el sofá. = The cat sleeps on the sofa."
+                                    />
+                                    <div className="mt-2 flex items-center justify-between flex-wrap gap-2 text-xs">
+                                        <span className="font-bold text-[var(--teal)]" data-testid="box-b-report">
+                                            {parsedBoxB.report}
+                                            {parsedBoxB.bracketCount > 0 ? ` · ${parsedBoxB.bracketCount} [gap]` : ''}
+                                            {parsedBoxB.picturePromptCount > 0 ? ` · ${parsedBoxB.picturePromptCount} *picture*` : ''}
+                                        </span>
+                                        <span className="text-[var(--navy)] opacity-70 font-medium">
+                                            <b>[word]</b> marks gap-fill · <b>*word*</b> fetches a picture
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Text Handling Rules Bar (Section 4) */}
+                            <div className="mt-4 pt-4 border-t-[2px] border-[var(--navy)] flex flex-wrap items-center justify-between gap-4 text-xs">
+                                <div className="flex flex-wrap items-center gap-5">
+                                    <span className="overline-text text-[var(--navy)]">Text &amp; grid rules:</span>
+                                    <label className="inline-flex items-center gap-2 font-bold cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={removeArticles}
+                                            onChange={(e) => setRemoveArticles(e.target.checked)}
+                                            className="w-4 h-4 accent-[var(--teal)]"
+                                        />
+                                        <span>Remove articles in puzzles (el/la/le/der/die/das/il…; always kept in matching)</span>
+                                    </label>
+                                    <label className="inline-flex items-center gap-2 font-bold cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={removeAccents}
+                                            onChange={(e) => setRemoveAccents(e.target.checked)}
+                                            className="w-4 h-4 accent-[var(--teal)]"
+                                        />
+                                        <span>Remove accents in grids (ß always stays ß)</span>
+                                    </label>
+                                    <label className="inline-flex items-center gap-2 font-bold cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={showTargetRubric}
+                                            onChange={(e) => setShowTargetRubric(e.target.checked)}
+                                            className="w-4 h-4 accent-[var(--teal)]"
+                                        />
+                                        <span>Show target-language rubrics</span>
+                                    </label>
+                                </div>
+                                {withPictures && loadingImages && (
+                                    <span className="font-bold text-[var(--teal)]">Looking up pictures…</span>
+                                )}
+                            </div>
+                        </section>
+
+                        {/* =========================================================
+                            SECTIONS 5, 6, 7, 8: WORKSHEET BUILDER (Left) + LIVE A4 PREVIEW (Right)
+                           ========================================================= */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                            {/* --- LEFT COLUMN: WORKSHEET BUILDER (5 cols on lg) --- */}
+                            <aside className="lg:col-span-5 kind-panel p-5 space-y-5">
+                                <div className="flex items-center justify-between gap-2 pb-3 border-b-[2px] border-[var(--navy)]">
+                                    <h2 className="heading-3 text-[var(--navy)]">Worksheet Builder</h2>
+                                    <button
+                                        type="button"
+                                        onClick={handleQuickWorksheet}
+                                        className="btn-chunky btn-mustard-chunky text-xs h-9 px-3"
+                                        title="Adds Word search + Matching + Gap fill + Jumbled sentences (skipping any that can't run)"
+                                    >
+                                        ⚡ Quick worksheet
+                                    </button>
+                                </div>
+
+                                {/* Header Settings: Title & Optional Class/Teacher Line */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label className="block">
+                                        <span className="text-xs font-bold text-[var(--navy)]">Worksheet Title</span>
+                                        <input
+                                            type="text"
+                                            value={worksheetTitle}
+                                            onChange={(e) => setWorksheetTitle(e.target.value)}
+                                            placeholder="Worksheet title"
+                                            className="mt-1 w-full textarea-chunky px-3 py-1.5 text-sm font-bold"
+                                        />
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-xs font-bold text-[var(--navy)]">Class / Teacher line (optional)</span>
+                                        <input
+                                            type="text"
+                                            value={classLine}
+                                            onChange={(e) => setClassLine(e.target.value)}
+                                            placeholder="e.g. Class 8B · Ms García"
+                                            className="mt-1 w-full textarea-chunky px-3 py-1.5 text-sm font-medium"
+                                        />
+                                    </label>
+                                </div>
+
+                                {/* Active Tasks in Order (Drag & Drop + Up/Down + Settings) */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--navy)]">
+                                            Active Sections ({selectedTasks.length}) — Drag to reorder
+                                        </span>
+                                        {selectedTasks.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedTasks([])}
+                                                className="text-xs font-bold text-[var(--orange)] hover:underline cursor-pointer"
+                                            >
+                                                Uncheck all
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {selectedTasks.length === 0 ? (
+                                        <div className="p-4 rounded-[10px] bg-[var(--cream)] border-[2px] border-dashed border-[var(--navy)] text-xs font-bold text-center text-[var(--navy)] opacity-75">
+                                            No tasks selected yet. Tick tasks from the catalogue below or click &ldquo;Quick worksheet&rdquo;.
+                                        </div>
+                                    ) : (
+                                        <ul className="space-y-2.5">
+                                            {selectedTasks.map((taskId, idx) => {
+                                                const meta = window.PictorioDeck.TASK_CATALOGUE.find(t => t.id === taskId);
+                                                if (!meta) return null;
+                                                const avail = window.PictorioDeck.getTaskAvailability(taskId, {
+                                                    vocab: parsedBoxA.items,
+                                                    sentences: parsedBoxB.items,
+                                                    withPictures,
+                                                });
+                                                const tSet = taskSettings[taskId] || {};
+                                                const langRub = window.PictorioDeck.I18N[lang]?.rubrics?.[taskId];
+
+                                                return (
+                                                    <li
+                                                        key={taskId}
+                                                        draggable
+                                                        onDragStart={() => setDraggedTaskId(taskId)}
+                                                        onDragOver={(e) => e.preventDefault()}
+                                                        onDrop={() => handleDropTask(taskId)}
+                                                        className={`p-3 rounded-[10px] border-[2px] border-[var(--navy)] transition-colors ${avail.available ? 'bg-[var(--cream)]' : 'bg-gray-100 opacity-65'}`}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <span className="cursor-grab select-none text-sm font-bold px-1.5 py-0.5 rounded bg-[var(--mustard)] border border-[var(--navy)]" title="Drag to reorder">
+                                                                    ⠿ {idx + 1}
+                                                                </span>
+                                                                <div className="min-w-0">
+                                                                    <div className="text-sm font-bold text-[var(--navy)] truncate">
+                                                                        {meta.name}
+                                                                        {langRub && showTargetRubric && (
+                                                                            <span className="ml-1.5 text-xs font-medium opacity-75">({langRub.title})</span>
+                                                                        )}
+                                                                    </div>
+                                                                    {!avail.available && (
+                                                                        <span className="text-[11px] font-bold text-[var(--orange)] block">
+                                                                            Skipped: {avail.reason}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={idx === 0}
+                                                                    onClick={() => moveTask(idx, -1)}
+                                                                    className="px-2 py-1 text-xs font-bold bg-[var(--paper)] border border-[var(--navy)] rounded disabled:opacity-40 cursor-pointer"
+                                                                    title="Move up"
+                                                                    aria-label={`Move ${meta.name} up`}
+                                                                >
+                                                                    ↑
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={idx === selectedTasks.length - 1}
+                                                                    onClick={() => moveTask(idx, 1)}
+                                                                    className="px-2 py-1 text-xs font-bold bg-[var(--paper)] border border-[var(--navy)] rounded disabled:opacity-40 cursor-pointer"
+                                                                    title="Move down"
+                                                                    aria-label={`Move ${meta.name} down`}
+                                                                >
+                                                                    ↓
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleTask(taskId)}
+                                                                    className="px-2 py-1 text-xs font-bold bg-[var(--paper)] text-[var(--orange)] border border-[var(--navy)] rounded cursor-pointer"
+                                                                    title="Remove task"
+                                                                    aria-label={`Remove ${meta.name}`}
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Per-Task Small Settings Panel */}
+                                                        {taskId === 'wordsearch' && (
+                                                            <div className="mt-2.5 pt-2.5 border-t border-[var(--navy)]/20 flex flex-wrap items-center gap-3 text-xs">
+                                                                <label className="inline-flex items-center gap-1.5 font-bold">
+                                                                    <span>Grid size (8–20):</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="8"
+                                                                        max="20"
+                                                                        value={tSet.gridSize || 12}
+                                                                        onChange={(e) => {
+                                                                            const val = Math.max(8, Math.min(20, parseInt(e.target.value, 10) || 12));
+                                                                            updateTaskSetting('wordsearch', 'gridSize', val);
+                                                                        }}
+                                                                        className="w-14 px-1.5 py-0.5 bg-[var(--paper)] border border-[var(--navy)] rounded font-mono font-bold"
+                                                                    />
+                                                                </label>
+                                                                <label className="inline-flex items-center gap-1.5 font-bold">
+                                                                    <span>Difficulty:</span>
+                                                                    <select
+                                                                        value={tSet.difficulty || 'easy'}
+                                                                        onChange={(e) => updateTaskSetting('wordsearch', 'difficulty', e.target.value)}
+                                                                        className="px-2 py-0.5 bg-[var(--paper)] border border-[var(--navy)] rounded font-bold"
+                                                                    >
+                                                                        <option value="easy">Easy (→ ↓)</option>
+                                                                        <option value="medium">Medium (+ diagonals)</option>
+                                                                        <option value="hard">Hard (+ backwards)</option>
+                                                                    </select>
+                                                                </label>
+                                                            </div>
+                                                        )}
+
+                                                        {taskId === 'matching' && (
+                                                            <div className="mt-2.5 pt-2.5 border-t border-[var(--navy)]/20 flex flex-wrap items-center gap-2 text-xs">
+                                                                <span className="font-bold">Pairs:</span>
+                                                                <select
+                                                                    value={tSet.pairMode || 'auto'}
+                                                                    onChange={(e) => updateTaskSetting('matching', 'pairMode', e.target.value)}
+                                                                    className="px-2 py-0.5 bg-[var(--paper)] border border-[var(--navy)] rounded font-bold"
+                                                                >
+                                                                    <option value="auto">Auto ({withPictures ? 'Picture – Target word' : 'English – Target word'})</option>
+                                                                    <option value="picture-target" disabled={!withPictures}>Picture – Target word</option>
+                                                                    <option value="english-target">English – Target word</option>
+                                                                    <option value="picture-english" disabled={!withPictures}>Picture – English</option>
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        {taskId === 'label_picture' && (
+                                                            <div className="mt-2.5 pt-2.5 border-t border-[var(--navy)]/20 flex flex-wrap items-center gap-2 text-xs">
+                                                                <span className="font-bold">Labels:</span>
+                                                                <select
+                                                                    value={tSet.mode || 'blank'}
+                                                                    onChange={(e) => updateTaskSetting('label_picture', 'mode', e.target.value)}
+                                                                    className="px-2 py-0.5 bg-[var(--paper)] border border-[var(--navy)] rounded font-bold"
+                                                                >
+                                                                    <option value="blank">Blank writing line</option>
+                                                                    <option value="scaffold">Scaffolded (p _ _ _ o)</option>
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        {taskId === 'jumbled_sentences' && (
+                                                            <div className="mt-2.5 pt-2.5 border-t border-[var(--navy)]/20 flex flex-wrap items-center gap-4 text-xs">
+                                                                <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={tSet.lowercaseFirst !== false}
+                                                                        onChange={(e) => updateTaskSetting('jumbled_sentences', 'lowercaseFirst', e.target.checked)}
+                                                                        className="accent-[var(--teal)]"
+                                                                    />
+                                                                    <span>Lowercase the first word</span>
+                                                                </label>
+                                                                <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={!!tSet.showEnglish}
+                                                                        onChange={(e) => updateTaskSetting('jumbled_sentences', 'showEnglish', e.target.checked)}
+                                                                        className="accent-[var(--teal)]"
+                                                                    />
+                                                                    <span>Show English as support</span>
+                                                                </label>
+                                                            </div>
+                                                        )}
+
+                                                        {taskId === 'sentence_gapfill' && (
+                                                            <div className="mt-2.5 pt-2.5 border-t border-[var(--navy)]/20 flex flex-wrap items-center gap-4 text-xs">
+                                                                <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={tSet.wordBank !== false}
+                                                                        onChange={(e) => updateTaskSetting('sentence_gapfill', 'wordBank', e.target.checked)}
+                                                                        className="accent-[var(--teal)]"
+                                                                    />
+                                                                    <span>Word bank (shuffled)</span>
+                                                                </label>
+                                                                <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={!!tSet.showFirstLetter}
+                                                                        onChange={(e) => updateTaskSetting('sentence_gapfill', 'showFirstLetter', e.target.checked)}
+                                                                        className="accent-[var(--teal)]"
+                                                                    />
+                                                                    <span>Show first letter in gap</span>
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+
+                                {/* Task Catalogue Checklist: Group A (Word tasks) & Group B (Sentence tasks) */}
+                                <div className="pt-3 border-t-[2px] border-[var(--navy)] space-y-4">
+                                    {[
+                                        ['A', 'A. Word tasks (from Box A)'],
+                                        ['B', 'B. Sentence tasks (from Box B)']
+                                    ].map(([grp, grpTitle]) => (
+                                        <div key={grp}>
+                                            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--navy)] mb-2">
+                                                {grpTitle}
+                                            </h3>
+                                            <div className="grid grid-cols-1 gap-1.5">
+                                                {window.PictorioDeck.TASK_CATALOGUE.filter(t => t.group === grp).map(t => {
+                                                    const avail = window.PictorioDeck.getTaskAvailability(t.id, {
+                                                        vocab: parsedBoxA.items,
+                                                        sentences: parsedBoxB.items,
+                                                        withPictures,
+                                                    });
+                                                    const checked = selectedTasks.includes(t.id);
+                                                    return (
+                                                        <label
+                                                            key={t.id}
+                                                            className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-[8px] border border-[var(--navy)]/30 text-xs ${avail.available ? 'bg-[var(--paper)] hover:bg-[var(--cream)] cursor-pointer' : 'bg-gray-100 opacity-55 cursor-not-allowed'}`}
+                                                        >
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    disabled={!avail.available && !checked}
+                                                                    onChange={() => toggleTask(t.id)}
+                                                                    className="w-4 h-4 accent-[var(--teal)]"
+                                                                />
+                                                                <span className="font-bold text-[var(--navy)] truncate">
+                                                                    {t.name}
+                                                                </span>
+                                                            </div>
+                                                            {!avail.available && (
+                                                                <span className="text-[11px] font-bold text-[var(--orange)] shrink-0">
+                                                                    {avail.reason}
+                                                                </span>
+                                                            )}
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </aside>
+
+                            {/* --- RIGHT COLUMN: LIVE A4 WORKSHEET PREVIEW & EXPORT BAR (7 cols on lg) --- */}
+                            <section className="lg:col-span-7 kind-panel p-5 flex flex-col space-y-4">
+                                {/* Top Preview Toolbar: Student / Answer Key Toggle + Export Buttons */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b-[2px] border-[var(--navy)]">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--navy)]">Preview:</span>
+                                        {[
+                                            ['student', `Student (${worksheetDeck.studentPages.length})`],
+                                            ['answer', `Answer key (${worksheetDeck.answerPages.length})`],
+                                            ['both', 'Student + Key'],
+                                            ['slides', `Slides (${slidesDeck.pages.length})`],
+                                        ].map(([id, label]) => (
+                                            <button
+                                                key={id}
+                                                type="button"
+                                                onClick={() => setPreviewMode(id)}
+                                                className={`grid-pill ${previewMode === id ? 'grid-pill-selected' : 'grid-pill-unselected'}`}
+                                            >
+                                                {label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Export Action Buttons (Section 8) */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <button
+                                            type="button"
+                                            onClick={handlePrintWorksheet}
+                                            className="btn-chunky btn-primary-chunky text-xs h-10 px-3.5"
+                                            title="Print or Save as PDF (Student pages followed by Answer Key pages)"
+                                        >
+                                            🖨️ Print / Save PDF
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={exportingFormat !== null}
+                                            onClick={() => handleExportPptx('worksheet')}
+                                            className="btn-chunky btn-secondary-chunky text-xs h-10 px-3"
+                                            title="Download A4 Worksheet + Answer Key + Credits as PowerPoint (.pptx)"
+                                        >
+                                            {exportingFormat === 'worksheet' ? 'Building PPTX…' : '📄 Worksheet .pptx'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={exportingFormat !== null}
+                                            onClick={() => handleExportPptx('slides')}
+                                            className="btn-chunky btn-secondary-chunky text-xs h-10 px-3"
+                                            title="Download Classroom Slides (One slide per task + Answer slides + Credits slide)"
+                                        >
+                                            {exportingFormat === 'slides' ? 'Building Slides…' : '🖥️ Slides .pptx'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Live A4 / Slides Canvas */}
+                                <div className="bg-[var(--cream)] border-[2px] border-[var(--navy)] rounded-[10px] p-4 sm:p-6 overflow-y-auto max-h-[980px] flex flex-col items-center gap-6">
+                                    {previewPages.map((page, i) => (
+                                        <figure
+                                            key={i}
+                                            className="w-full m-0"
+                                            style={{ maxWidth: previewMode === 'slides' ? 680 : 620 }}
+                                        >
+                                            <DeckPage page={page} cards={cards} pictureMap={pictureMap} />
+                                            <figcaption className="text-xs font-bold text-[var(--navy)] opacity-75 mt-2 flex justify-between">
+                                                <span>{i + 1}. {page.label}</span>
+                                                <span>Version #{seed}</span>
+                                            </figcaption>
+                                        </figure>
+                                    ))}
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* =========================================================
+                            PICTORIO FLASHCARD GRID & PICTURE PICKER SECTION
+                           ========================================================= */}
+                        <section className="kind-panel p-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b-[2px] border-[var(--navy)]">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <h2 className="heading-3 text-[var(--navy)]">
+                                        Vocabulary Picture Cards ({cards.length})
+                                    </h2>
+                                    <span className="text-xs font-bold text-[var(--navy)] opacity-70">
+                                        Click any card&rsquo;s search icon to pick a different picture — stored with that word so it never changes by itself.
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <select
+                                        value={labelMode}
+                                        onChange={(e) => setLabelMode(e.target.value)}
+                                        className="select-chunky text-xs h-9"
+                                        aria-label="Card label mode"
+                                    >
+                                        <option value="full">Full labels</option>
+                                        <option value="scaffold">Scaffolded (p***)</option>
+                                        <option value="blank">Blank (Quiz)</option>
+                                    </select>
+                                    <label className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 bg-[var(--cream)] border-[2px] border-[var(--navy)] rounded-[8px] cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={showEnglishOnCards}
+                                            onChange={(e) => setShowEnglishOnCards(e.target.checked)}
+                                            className="accent-[var(--teal)]"
+                                        />
+                                        <span>Show English</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCardsSection(!showCardsSection)}
+                                        className="grid-pill grid-pill-unselected text-xs"
+                                    >
+                                        {showCardsSection ? '▲ Hide cards' : '▼ Show cards'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {showCardsSection && (
+                                <div className="mt-5">
+                                    {!withPictures ? (
+                                        <div className="p-6 rounded-[10px] bg-[var(--cream)] border-[2px] border-[var(--navy)] text-center">
+                                            <p className="text-sm font-bold text-[var(--navy)]">
+                                                Pictures are currently switched OFF. No picture searches run, and all worksheet clues use English.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => setWithPictures(true)}
+                                                className="mt-3 btn-chunky btn-mustard-chunky text-xs h-9"
+                                            >
+                                                Turn pictures ON
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Grid size selector pills */}
+                                            <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="overline-text text-[var(--navy)]">Grid columns:</span>
+                                                    {GRID_SIZES.map((opt) => (
+                                                        <button
+                                                            key={opt.id}
+                                                            type="button"
+                                                            onClick={() => setGridConfig(opt)}
+                                                            className={`grid-pill ${gridConfig.id === opt.id ? 'grid-pill-selected' : 'grid-pill-unselected'}`}
+                                                        >
+                                                            {opt.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        clearVibewordCache();
+                                                        setSuccessMessage('Image search cache cleared');
+                                                        setTimeout(() => setSuccessMessage(''), 2500);
+                                                    }}
+                                                    className="text-xs font-bold text-[var(--orange)] hover:underline cursor-pointer"
+                                                >
+                                                    Clear image cache
+                                                </button>
+                                            </div>
+
+                                            <div className={`grid gap-5 ${gridConfig.cols === 5 ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5' : gridConfig.cols === 4 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
+                                                {cards.map((card, index) => (
+                                                    <div
+                                                        key={card.wordKey + '-' + index}
+                                                        className="kind-card p-4 flex flex-col items-center justify-between relative group min-h-[290px]"
+                                                        style={{ transform: `rotate(${getCardRotation(index)}deg)` }}
+                                                    >
+                                                        {/* Source & Licence Top Bar */}
+                                                        <div className="w-full flex justify-between items-center mb-2 px-1">
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border-[1.5px] border-[var(--navy)] bg-transparent text-[var(--navy)] inline-flex items-center gap-1">
+                                                                    <span>{card.provider}</span>
+                                                                </span>
+                                                                {(card.provider === 'ARASAAC' || card.providerKey === 'arasaac') && (
+                                                                    <span
+                                                                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border-[1.5px] border-[var(--navy)] bg-transparent text-[var(--navy)] cursor-help"
+                                                                        title="Non-commercial classroom use only. Licence CC BY-NC-SA."
+                                                                    >
+                                                                        NC
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {card.license && (
+                                                                <span className="text-[11px] font-medium text-[var(--navy)] opacity-70 truncate max-w-[115px]" title={card.license}>
+                                                                    {card.license}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {showEnglishOnCards && card.english && (
+                                                            <div className="w-full text-center text-[var(--navy)] opacity-80 text-sm font-bold mb-1 px-1">
+                                                                {card.english}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Picture Box (Clickable to open picture picker) */}
+                                                        <div
+                                                            onClick={() => runPickerSearch(card.wordKey, card.word, card.searchTerm)}
+                                                            className="w-full h-36 flex items-center justify-center mb-2 overflow-hidden rounded-[10px] bg-[var(--cream)] border-[1.5px] border-[var(--navy)] relative p-2 cursor-pointer"
+                                                            title="Click to pick a different picture"
+                                                        >
+                                                            {card.image ? (
+                                                                <img
+                                                                    src={card.image}
+                                                                    alt={card.word}
+                                                                    className="max-h-full max-w-full object-contain"
+                                                                    loading="lazy"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex flex-col items-center justify-center text-center p-2 text-[var(--navy)] opacity-60">
+                                                                    <span className="text-xs font-bold">No image yet</span>
+                                                                    <span className="text-[10px] mt-0.5 font-medium">Click to search or upload</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {card.attribution && (
+                                                            <div className="w-full text-center px-1 mb-1">
+                                                                <div className="text-[10px] text-[var(--navy)] opacity-70 truncate font-medium" title={card.attribution}>
+                                                                    {card.author ? `© ${card.author}` : card.attribution}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Hover Action Buttons */}
+                                                        <div className="absolute top-2 right-2 flex space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRefreshCardImage(card)}
+                                                                aria-label="Try next image"
+                                                                title="Try next image from providers"
+                                                                className="icon-btn-chunky"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => runPickerSearch(card.wordKey, card.word, card.searchTerm)}
+                                                                aria-label="Choose a picture"
+                                                                title="See pictures from every source and pick one"
+                                                                className="icon-btn-chunky"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                                            </button>
+                                                            {card.history && card.history.length > 0 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => undoPictureForKey(card.wordKey)}
+                                                                    aria-label="Back to previous picture"
+                                                                    title="Back to previous picture"
+                                                                    className="icon-btn-chunky"
+                                                                >
+                                                                    ↩
+                                                                </button>
+                                                            )}
+                                                            <label
+                                                                aria-label="Upload custom image"
+                                                                title="Upload image file"
+                                                                className="icon-btn-chunky"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUploadCardImage(card.wordKey, e)} />
+                                                            </label>
+                                                        </div>
+
+                                                        {/* Target Word Label */}
+                                                        <div className="w-full mt-1 text-center">
+                                                            <div
+                                                                className="w-full text-center font-heading text-[var(--navy)] text-lg sm:text-xl leading-snug break-words"
+                                                                style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 800 }}
+                                                            >
+                                                                {getMaskedLabel(card.word, labelMode)}
+                                                            </div>
+                                                            <div className="h-[5px] w-12 bg-[var(--mustard)] border-[1.5px] border-[var(--navy)] rounded-full mx-auto mt-1"></div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Extra Sentence *keyword* Pictures if any */}
+                                            {extraKeywordCards.length > 0 && (
+                                                <div className="mt-6 pt-4 border-t-[2px] border-[var(--navy)]">
+                                                    <h3 className="text-sm font-bold text-[var(--navy)] mb-3">
+                                                        Sentence *keyword* pictures (from Box B)
+                                                    </h3>
+                                                    <div className="flex flex-wrap gap-4">
+                                                        {extraKeywordCards.map((kc) => (
+                                                            <div key={kc.wordKey} className="bg-[var(--cream)] border-[2px] border-[var(--navy)] rounded-[10px] p-3 flex items-center gap-3">
+                                                                {kc.image ? (
+                                                                    <img src={kc.image} alt={kc.word} className="w-14 h-14 object-contain bg-white border border-[var(--navy)] rounded p-1" />
+                                                                ) : (
+                                                                    <div className="w-14 h-14 flex items-center justify-center bg-white border border-[var(--navy)] rounded text-[10px] font-bold">No pic</div>
+                                                                )}
+                                                                <div>
+                                                                    <div className="font-bold text-sm text-[var(--navy)]">*{kc.word}*</div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => runPickerSearch(kc.wordKey, kc.word, kc.searchTerm)}
+                                                                        className="text-xs font-bold text-[var(--teal)] hover:underline cursor-pointer mt-0.5"
+                                                                    >
+                                                                        Change picture
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </section>
+
+                        {/* --- ATTRIBUTIONS & LICENCES ACCORDION --- */}
+                        {cardsWithAttribution.length > 0 && (
+                            <section className="kind-panel p-5 overflow-hidden">
+                                <div
+                                    onClick={() => setShowAttributionsPanel(!showAttributionsPanel)}
+                                    className="flex items-center justify-between cursor-pointer"
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <span className="font-heading font-extrabold text-[var(--navy)] text-base">Attributions &amp; licences</span>
+                                        <span className="text-xs font-bold text-[var(--navy)] opacity-70">({cardsWithAttribution.length} items)</span>
+                                    </div>
+                                    <span className="text-[var(--navy)] text-sm font-bold">{showAttributionsPanel ? '▲ Hide' : '▼ Show'}</span>
+                                </div>
+
+                                {showAttributionsPanel && (
+                                    <div className="pt-4 mt-4 border-t-[2px] border-[var(--navy)]">
+                                        {cards.some(c => c.provider === 'ARASAAC' || c.providerKey === 'arasaac') && (
+                                            <div className="mb-4 px-4 py-3 bg-[var(--cream)] text-[var(--navy)] border-[2px] border-[var(--navy)] rounded-[10px] text-xs font-medium">
+                                                This set contains ARASAAC pictograms, licensed CC BY-NC-SA. Classroom use only, not for resale.
+                                            </div>
+                                        )}
+                                        <div className="flex justify-end mb-3">
+                                            <button
+                                                type="button"
+                                                onClick={handleCopyAttributions}
+                                                className="btn-chunky btn-secondary-chunky px-4 text-xs h-10"
+                                            >
+                                                <span>{copiedAttributions ? '✓ Copied' : '📋 Copy attributions'}</span>
+                                            </button>
+                                        </div>
+                                        <div className="bg-[var(--cream)] rounded-[10px] p-4 border-[2px] border-[var(--navy)] font-mono text-xs text-[var(--navy)] opacity-80 space-y-1.5 max-h-60 overflow-y-auto">
+                                            {cardsWithAttribution.map((c, i) => (
+                                                <div key={i}>
+                                                    <span className="font-bold">{c.word}</span>
+                                                    <span className="opacity-70"> — </span>
+                                                    <span>{c.attribution || c.license || c.provider}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </section>
+                        )}
+                    </main>
+
+                    {/* =========================================================
+                        PICTURE PICKER MODAL (Multi-source image chooser)
+                       ========================================================= */}
+                    {picker && (() => {
+                        const existingPic = pictureMap[picker.wordKey] || {};
+                        const total = picker.groups.reduce((n, g) => n + g.items.length, 0);
+                        return (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 no-print" style={{ background: 'rgba(12,16,41,0.55)' }} onClick={() => setPicker(null)}>
+                                <div role="dialog" aria-modal="true" aria-label="Choose a picture" className="kind-panel w-full max-w-5xl flex flex-col" style={{ maxHeight: '92vh' }} onClick={(e) => e.stopPropagation()}>
+                                    <div className="px-5 py-4 border-b-[2px] border-[var(--navy)] flex flex-col gap-3">
+                                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                                            <h2 className="font-heading font-extrabold text-[var(--navy)] text-xl">Pictures for “{picker.displayWord}”</h2>
+                                            <div className="flex items-center gap-2 text-xs font-bold text-[var(--navy)]">
+                                                <span className="opacity-70">Current:</span>
+                                                {existingPic.image ? (
+                                                    <img src={existingPic.image} alt="" className="w-12 h-12 object-contain bg-white border-[2px] border-[var(--navy)] rounded-[6px]" />
+                                                ) : (
+                                                    <span className="opacity-70">none</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); runPickerSearch(picker.wordKey, picker.displayWord, e.target.elements.q.value); }}>
+                                            <input
+                                                name="q"
+                                                key={picker.query}
+                                                defaultValue={picker.query}
+                                                aria-label="Search for pictures"
+                                                className="flex-1 textarea-chunky px-3 py-2 text-sm font-medium"
+                                                placeholder="Search in English, e.g. dog, cat, house"
+                                            />
+                                            <button type="submit" className="btn-chunky btn-primary-chunky">Search</button>
+                                        </form>
+                                    </div>
+
+                                    <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 bg-[var(--cream)] space-y-5">
+                                        {picker.loading && <p className="text-sm font-bold text-[var(--navy)]">Searching every source…</p>}
+                                        {!picker.loading && total === 0 && <p className="text-sm font-bold text-[var(--navy)]">No pictures found. Try a shorter or different English word.</p>}
+                                        {!picker.loading && picker.groups.filter(g => g.items.length).map(g => (
+                                            <section key={g.name}>
+                                                <h3 className="text-sm font-bold text-[var(--navy)]">{g.name} <span className="font-medium opacity-70">· {g.note}</span></h3>
+                                                <div className="grid gap-3 mt-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
+                                                    {g.items.map((item, i) => {
+                                                        const current = item.url === existingPic.image;
+                                                        return (
+                                                            <button
+                                                                key={item.url + i}
+                                                                type="button"
+                                                                title={item.attribution}
+                                                                onClick={() => {
+                                                                    applyPictureToKey(picker.wordKey, item, { searchTerm: picker.query, imagePage: 1 });
+                                                                    setPicker(null);
+                                                                }}
+                                                                className={`bg-white rounded-[10px] border-[2px] p-1.5 flex flex-col items-center gap-1 cursor-pointer hover:shadow-[3px_3px_0_var(--navy)] ${current ? 'border-[var(--teal)] ring-2 ring-[var(--teal)]' : 'border-[var(--navy)]'}`}
+                                                            >
+                                                                <img src={item.url} alt="" loading="lazy" className="w-full h-24 object-contain" />
+                                                                <span className="text-[10px] font-medium text-[var(--navy)] opacity-70 truncate w-full text-center">
+                                                                    {current ? 'Current picture' : (item.author || item.provider)}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </section>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 flex-wrap px-5 py-4 border-t-[2px] border-[var(--navy)]">
+                                        <button
+                                            type="button"
+                                            disabled={!existingPic.history || existingPic.history.length === 0}
+                                            onClick={() => undoPictureForKey(picker.wordKey)}
+                                            className="btn-chunky btn-secondary-chunky disabled:opacity-40"
+                                        >
+                                            ↩ Back to previous picture
+                                        </button>
+                                        <button type="button" onClick={() => setPicker(null)} className="btn-chunky btn-secondary-chunky">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PictorioApp />);
+    </script>
+</body>
+</html>
